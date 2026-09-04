@@ -1,0 +1,69 @@
+{
+  "common": {
+    "appName": "manga-eroico",
+    "tagline": "만화 완전 자동 번역 · 로컬 우선 · 시각화 워크플로",
+    "save": "저장",
+    "cancel": "취소",
+    "confirm": "확인",
+    "delete": "삭제",
+    "close": "닫기",
+    "retry": "재시도",
+    "loading": "불러오는 중…",
+    "notFound": "페이지를 찾을 수 없습니다",
+    "backHome": "홈으로"
+  },
+  "nav": {
+    "projects": "프로젝트",
+    "workflow": "워크플로",
+    "editor": "편집기",
+    "models": "모델 관리",
+    "settings": "설정",
+    "theme": {
+      "label": "테마",
+      "light": "라이트",
+      "dark": "다크",
+      "system": "시스템 따르기"
+    }
+  },
+  "projects": {
+    "title": "프로젝트",
+    "subtitle": "모든 번역 작업은 독립된 프로젝트로 관리됩니다.",
+    "newProject": "새 프로젝트",
+    "open": "열기",
+    "recent": "최근 프로젝트",
+    "empty": "프로젝트가 없습니다. '새 프로젝트'로 첫 번역을 시작하세요.",
+    "namePlaceholder": "프로젝트 이름 (예: 진격의 거인 Vol.1)",
+    "sourceLang": "원본 언어",
+    "targetLang": "대상 언어",
+    "progress": "진행률",
+    "lastOpened": "마지막 열람",
+    "chapters": "챕터",
+    "pages": "페이지",
+    "createWizard": {
+      "step1": "만화 이미지 선택",
+      "step2": "이름 및 언어",
+      "step3": "하드웨어 판정",
+      "pickImages": "이미지 파일 선택",
+      "autoDetect": "언어와 권장 등급이 자동 판정되었습니다"
+    }
+  },
+  "workflow": {
+    "title": "번역 워크플로",
+    "subtitle": "전체 파이프라인을 한눈에: 각 노드의 상태 확인, 토글, 증분 재실행.",
+    "detect": "텍스트 검출",
+    "ocr": "OCR",
+    "inpaint": "글자 지우기",
+    "translate": "기계 번역",
+    "polish": "문장 다듬기",
+    "render": "조판 렌더링",
+    "status": {
+      "pending": "대기 중",
+      "running": "실행 중",
+      "completed": "완료",
+      "skipped": "건너뜀",
+      "failed": "실패"
+    },
+    "enableHint": "토글은 프로젝트 설정에 저장됩니다",
+    "polishHint": "다듬기에는 OpenAI 호환 API 설정이 필요합니다 (설정 페이지)",
+    "runPage": "이 페이지 실행",
+    "running": "파이프라인 실행 중…",
