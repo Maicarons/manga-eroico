@@ -1,0 +1,29 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# Node
+node_modules/
+dist/
+coverage/
+*.local
+
+# VitePress
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+# Models & projects (never commit weights or user data)
+/models/
+/**/*.mepro/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Env & secrets
+.env
+.env.*
+*.key
