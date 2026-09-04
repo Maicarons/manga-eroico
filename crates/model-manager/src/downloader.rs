@@ -90,3 +90,96 @@ pub fn sha256_file(path: &Path) -> Result<String, DownloadError> {
         let n = file.read(&mut buf)?;
         if n == 0 {
             break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(hex::encode(hasher.finalize()))
+}
+
+/// Verifies a file against an expected SHA256. Empty expectation = skip.
+pub fn verify_sha256(path: &Path, expected: &str) -> Result<(), DownloadError> {
+    if expected.is_empty() {
+        return Ok(());
+    }
+    let actual = sha256_file(path)?;
+    if actual.eq_ignore_ascii_case(expected) {
+        Ok(())
+    } else {
+        Err(DownloadError::ChecksumMismatch {
+            path: path.to_path_buf(),
+            expected: expected.to_string(),
+            actual,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn downloads_and_verifies() {
+        // Tiny local HTTP server on a background task to exercise resume path.
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let payload: Vec<u8> = (0..=255u8).cycle().take(256 * 1024).collect();
+        let expected = {
+            let mut h = Sha256::new();
+            h.update(&payload);
+            hex::encode(h.finalize())
+        };
+
+        let server_payload = payload.clone();
+        tokio::spawn(async move {
+            loop {
+                let (sock, _) = match listener.accept().await {
+                    Ok(x) => x,
+                    Err(_) => return,
+                };
+                let data = server_payload.clone();
+                tokio::spawn(async move {
+                    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+                    let mut sock = sock;
+                    let mut buf = vec![0u8; 4096];
+                    let n = sock.read(&mut buf).await.unwrap_or(0);
+                    let req = String::from_utf8_lossy(&buf[..n]).to_string();
+                    let start = req
+                        .lines()
+                        .find(|l| l.to_ascii_lowercase().starts_with("range:"))
+                        .and_then(|l| l.split('=').nth(1))
+                        .and_then(|s| s.split('-').next())
+                        .and_then(|s| s.parse::<usize>().ok())
+                        .unwrap_or(0);
+                    let status = if start > 0 { "206 Partial Content" } else { "200 OK" };
+                    let body = &data[start..];
+                    let head = format!(
+                        "HTTP/1.1 {status}\r\nContent-Length: {}\r\nAccept-Ranges: bytes\r\nConnection: close\r\n\r\n",
+                        body.len()
+                    );
+                    sock.write_all(head.as_bytes()).await.unwrap();
+                    sock.write_all(body).await.unwrap();
+                });
+            }
+        });
+
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("model.bin");
+        let client = reqwest::Client::new();
+        let url = format!("http://{addr}/model.bin");
+
+        // full download
+        download_file(&client, &url, dest.clone(), &|_, _| {}).await.unwrap();
+        verify_sha256(&dest, &expected).unwrap();
+        assert_eq!(tokio::fs::metadata(&dest).await.unwrap().len() as usize, payload.len());
+        assert!(!dest.with_extension("part").exists());
+
+        // corrupt expectation -> mismatch error
+        match verify_sha256(&dest, &"0".repeat(64)) {
+            Err(DownloadError::ChecksumMismatch { .. }) => {}
+            other => panic!("expected checksum mismatch, got {other:?}"),
+        }
+
+        // empty expectation = skip
+        verify_sha256(&dest, "").unwrap();
+    }
+}
