@@ -94,3 +94,99 @@ pub fn wrap_lines(text: &str, max_chars_per_line: usize) -> Vec<String> {
                     }
                     current.push(ch);
                     current_len += 1;
+                }
+            } else {
+                // normalize the word: single spaces join words, none at line
+                // edges; fit decision counts the joining space
+                let trimmed = word.trim().trim_start_matches(' ');
+                let trimmed_len = trimmed.chars().count();
+                let joiner: usize = if current_len > 0 { 1 } else { 0 };
+                if current_len + joiner + trimmed_len > max_chars_per_line && current_len > 0 {
+                    lines.push(std::mem::take(&mut current));
+                    current.push_str(trimmed);
+                    current_len = trimmed_len;
+                } else {
+                    if joiner == 1 && !current.ends_with(' ') {
+                        current.push(' ');
+                        current_len += 1;
+                    }
+                    current.push_str(trimmed);
+                    current_len += trimmed_len;
+                }
+            }
+        }
+        lines.push(current.trim_end().to_string());
+    }
+    lines
+}
+
+/// Max font size (binary-searched) whose wrapped layout fits the box.
+/// Assumes glyph advance ≈ font_size for CJK and ≈ 0.55 * font_size for latin.
+pub fn fit_font_size(input: &LayoutInput, min_size: u32, max_size: u32) -> LayoutPlan {
+    let mut best: Option<(u32, Vec<GlyphCell>)> = None;
+    let (mut lo, mut hi) = (min_size, max_size);
+    while lo <= hi {
+        let mid = (lo + hi) / 2;
+        if let Some(cells) = try_layout(input, mid) {
+            best = Some((mid, cells));
+            lo = mid + 1;
+        } else {
+            if mid == 0 {
+                break;
+            }
+            hi = mid - 1;
+        }
+    }
+    match best {
+        Some((size, cells)) => LayoutPlan { font_size: size, cells },
+        None => LayoutPlan { font_size: min_size, cells: try_layout(input, min_size).unwrap_or_default() },
+    }
+}
+
+fn glyph_advance(ch: char, size: u32) -> f32 {
+    if is_cjk(ch) {
+        size as f32
+    } else {
+        size as f32 * 0.55
+    }
+}
+
+fn try_layout(input: &LayoutInput, size: u32) -> Option<Vec<GlyphCell>> {
+    let style = &input.style;
+    let box_w = input.box_w as f32;
+    let box_h = input.box_h as f32;
+    let gap = style.line_gap;
+
+    if style.vertical {
+        // vertical: characters stack top-to-bottom, columns right-to-left
+        let max_rows = ((box_h + gap) / (size as f32)).floor() as usize;
+        if max_rows == 0 {
+            return None;
+        }
+        let columns: Vec<Vec<char>> = {
+            let mut cols = vec![Vec::new()];
+            for ch in input.text.chars() {
+                if cols.last().unwrap().len() >= max_rows {
+                    cols.push(Vec::new());
+                }
+                cols.last_mut().unwrap().push(ch);
+            }
+            cols
+        };
+        let col_pitch = size as f32 + gap;
+        let total_w = columns.len() as f32 * col_pitch - gap;
+        if total_w > box_w {
+            return None;
+        }
+        // columns flow right-to-left: column 0 at the right edge
+        let mut cells = Vec::new();
+        for (ci, col) in columns.iter().enumerate() {
+            let x = box_w - (ci as f32 + 1.0) * col_pitch + gap;
+            for (ri, ch) in col.iter().enumerate() {
+                cells.push(GlyphCell { ch: *ch, x, y: ri as f32 * (size as f32) });
+            }
+        }
+        Some(cells)
+    } else {
+        // horizontal: approximate width in "em units"
+        let total_advance: f32 = input.text.chars().map(|c| glyph_advance(c, 1)).sum();
