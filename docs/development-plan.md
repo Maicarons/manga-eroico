@@ -178,3 +178,33 @@ manga-eroico/
 │  ├─ model-manager/            # ModelScope 下载、系统探测、档位决策
 │  └─ me-server/                # 无头 CLI / HTTP 服务模式（可选）
 ├─ src-tauri/                   # Tauri 2 host（命令/事件/打包配置）
+├─ src/                         # React 前端
+│  ├─ app/                      # 路由、布局
+│  ├─ features/
+│  │  ├─ projects/              # 工程库：新建/重开/章节树/进度矩阵
+│  │  ├─ workflow/              # React Flow 工作流画布（含润色开关节点）
+│  │  ├─ editor/                # Konva 漫画编辑器（含润色 diff 视图）
+│  │  ├─ models/                # 模型管理器 UI
+│  │  ├─ batch/                 # 批量队列
+│  │  └─ settings/
+│  ├─ i18n/                     # zh-CN / en / ja / ko 资源
+│  └─ design-system/            # Tokens、主题（明/暗）、组件库
+├─ docs/                        # VitePress 文档站（本文件所在）
+├─ tests/
+│  ├─ e2e/                      # Playwright + tauri-driver
+│  └─ golden/                   # 渲染金样图测试
+└─ .github/workflows/           # ci.yml / release.yml / docs.yml
+```
+
+---
+
+## 6. 前端 UI/UX 方案
+
+### 6.1 设计流程约定
+
+M1 阶段调用 **ui-ux-pro-max**（风格/色板/组件选型）与 **frontend-design**（生产级前端实现规范）skill，产出 `docs/design/design-system.md` + Tokens 代码后才开始写界面。核心约束提前锁定：
+
+- **暗黑模式为一等公民**：所有颜色走 CSS 变量语义层（`--bg`/`--surface`/`--text`/`--accent`…），Tailwind v4 主题化；跟随系统 + 手动切换。
+- **对普通用户友好**：默认打开即「拖图进来」的极简首屏；高级能力（节点图、参数、术语表）收进「专家模式」开关；每一步有明确进度与可撤销操作。
+- 中漫/日漫阅读方向、CJK 排版（竖排、标点挤压）作为渲染层硬需求。
+
