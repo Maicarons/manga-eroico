@@ -224,3 +224,117 @@ impl Project {
     /// Appends an operation record to `history/log.jsonl` (append-only).
     pub fn log_operation(&self, op: &str, detail: &serde_json::Value) -> Result<(), ProjectError> {
         use std::io::Write;
+        let mut f = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(self.root.join("history").join("log.jsonl"))?;
+        let record = serde_json::json!({ "ts": Utc::now().to_rfc3339(), "op": op, "detail": detail });
+        writeln!(f, "{record}")?;
+        Ok(())
+    }
+}
+
+fn next_version(dir: &Path) -> Result<u32, ProjectError> {
+    Ok(list_versions(dir)?.into_iter().max().unwrap_or(0) + 1)
+}
+
+fn list_versions(dir: &Path) -> Result<Vec<u32>, ProjectError> {
+    let mut out = vec![];
+    if dir.exists() {
+        for entry in std::fs::read_dir(dir)? {
+            let name = entry?.file_name().to_string_lossy().to_string();
+            if let Some(v) = name.strip_prefix('v').and_then(|s| s.split('.').next()) {
+                if let Ok(n) = v.parse::<u32>() {
+                    out.push(n);
+                }
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Placeholder migration chain: v1 is current; future versions add steps here.
+fn migrate(_project: &mut Project) {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tmp() -> tempfile::TempDir {
+        tempfile::tempdir().unwrap()
+    }
+
+    #[test]
+    fn create_open_save_roundtrip() {
+        let dir = tmp();
+        let root = dir.path().join("Test.mepro");
+        {
+            let mut p = Project::create(&root, "Test", Lang::Ja, Lang::Zh).unwrap();
+            assert!(root.join("pages").exists());
+            assert!(root.join("artifacts").exists());
+            let pid = p.add_page("001.jpg", 1100, 1600);
+            let cid = p.add_chapter("Ch1", vec![pid.clone()]);
+            p.set_glossary_term("protagonist", "主角");
+            p.log_operation("import", &serde_json::json!({ "pages": 1 })).unwrap();
+            p.save().unwrap();
+            assert_eq!(p.page(&pid).unwrap().width, 1100);
+            assert_eq!(p.file.chapters[0].id, cid);
+        }
+        let p = Project::open(&root).unwrap();
+        assert_eq!(p.file().name, "Test");
+        assert_eq!(p.file().schema_version, CURRENT_SCHEMA_VERSION);
+        assert_eq!(p.file().pages.len(), 1);
+        assert_eq!(p.file().glossary.get("protagonist").unwrap(), "主角");
+        assert!(!p.file().pipeline.is_enabled(pipeline_core::graph::StepKind::Polish));
+        assert!(p.file().updated_at >= p.file().created_at);
+    }
+
+    #[test]
+    fn open_rejects_non_project() {
+        let dir = tmp();
+        let err = Project::open(dir.path()).unwrap_err();
+        assert!(matches!(err, ProjectError::NotAProject(_)));
+    }
+
+    #[test]
+    fn open_rejects_newer_schema() {
+        let dir = tmp();
+        let root = dir.path().join("Fut.mepro");
+        Project::create(&root, "F", Lang::Ja, Lang::En).unwrap();
+        let mut file: ProjectFile =
+            serde_json::from_slice(&std::fs::read(root.join("project.json")).unwrap()).unwrap();
+        file.schema_version = 999;
+        std::fs::write(root.join("project.json"), serde_json::to_vec(&file).unwrap()).unwrap();
+        let err = Project::open(&root).unwrap_err();
+        assert!(matches!(err, ProjectError::SchemaTooNew { .. }));
+    }
+
+    #[test]
+    fn artifact_versions_increment_and_latest_wins() {
+        let dir = tmp();
+        let root = dir.path().join("A.mepro");
+        let mut p = Project::create(&root, "A", Lang::Ja, Lang::Ko).unwrap();
+        let pid = p.add_page("p.jpg", 100, 100);
+        let v1 = p.put_artifact("ocr", &pid, b"{\"text\":\"v1\"}", "json").unwrap();
+        let v2 = p.put_artifact("ocr", &pid, b"{\"text\":\"v2\"}", "json").unwrap();
+        assert_eq!((v1, v2), (1, 2));
+        let (v, bytes) = p.latest_artifact("ocr", &pid).unwrap().unwrap();
+        assert_eq!(v, 2);
+        assert_eq!(bytes, b"{\"text\":\"v2\"}");
+        assert!(p.latest_artifact("render", &pid).unwrap().is_none());
+    }
+
+    #[test]
+    fn history_is_append_only() {
+        let dir = tmp();
+        let root = dir.path().join("H.mepro");
+        let p = Project::create(&root, "H", Lang::Ja, Lang::Zh).unwrap();
+        p.log_operation("a", &serde_json::json!(1)).unwrap();
+        p.log_operation("b", &serde_json::json!(2)).unwrap();
+        let log = std::fs::read_to_string(root.join("history/log.jsonl")).unwrap();
+        let lines: Vec<&str> = log.trim().lines().collect();
+        assert_eq!(lines.len(), 2);
+        let rec: serde_json::Value = serde_json::from_str(lines[1]).unwrap();
+        assert_eq!(rec["op"], "b");
+    }
+}
