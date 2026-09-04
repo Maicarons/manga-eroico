@@ -99,3 +99,105 @@ async function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
       return true as T;
     }
     case "polish_preview":
+      return {
+        analysis: "Mock analysis: tone is light-hearted, names consistent.",
+        items: (args?.bubbles as Array<{ id: string; machine_translation: string }>)?.map((b) => ({
+          id: b.id,
+          polished: `✨ ${b.machine_translation}`,
+          note: null,
+        })),
+      } as T;
+    default:
+      throw new Error(`mock: unknown command ${cmd}`);
+  }
+}
+
+function emitPipeline(ev: unknown) {
+  window.dispatchEvent(new CustomEvent("mock-pipeline-event", { detail: ev }));
+}
+
+// ---- typed API surface ----
+
+export interface HardwareReport {
+  info: {
+    cpu_cores: number;
+    total_ram_mib: number;
+    gpus: Array<{ name: string; vram_mib: number | null }>;
+    free_disk_mib: number;
+  };
+  tier: "lite" | "standard" | "pro";
+}
+
+export interface ModelSpec {
+  id: string;
+  role: "detect" | "cls" | "rec" | "dict" | "inpaint" | "llm";
+  lang: "zh" | "en" | "ja" | "ko" | "any";
+  modelscope_repo: string;
+  file: string;
+  size_mib: number;
+  sha256: string;
+}
+
+export interface PipelineEvent {
+  page: { 0: string };
+  step: "detect" | "ocr" | "inpaint" | "translate" | "polish" | "render";
+  status: "pending" | "running" | "completed" | "skipped" | "failed";
+  progress: number | null;
+  message: string | null;
+}
+
+export interface PolishResult {
+  analysis: string;
+  items: Array<{ id: string; polished: string; note: string | null }>;
+}
+
+export const api = {
+  greet: (name: string) => invoke<string>("greet", { name }),
+  getHardwareInfo: () => invoke<HardwareReport>("get_hardware_info"),
+  listModels: () => invoke<ModelSpec[]>("list_models"),
+  downloadModel: (specId: string, destDir = "models") =>
+    invoke<string>("download_model", { specId, destDir }),
+  createProject: (root: string, name: string, sourceLang: string, targetLang: string) =>
+    invoke("create_project", { root, name, sourceLang, targetLang }),
+  setNodeEnabled: (node: string, enabled: boolean) =>
+    invoke<void>("set_node_enabled", { node, enabled }),
+  runPipelinePage: (pageId: string) => invoke<boolean>("run_pipeline_page", { pageId }),
+  polishPreview: (
+    bubbles: Array<{
+      id: string;
+      page: number;
+      position: number;
+      source_text: string;
+      machine_translation: string;
+    }>,
+  ) => invoke<PolishResult>("polish_preview", { bubbles }),
+};
+
+/** Unified pipeline/model event subscription for both real & mock backends. */
+export function listenPipeline(cb: (ev: PipelineEvent) => void): () => void {
+  if (isTauri()) {
+    let unlisten: (() => void) | null = null;
+    import("@tauri-apps/api/event").then(({ listen }) =>
+      listen<PipelineEvent>("pipeline-event", (e) => cb(e.payload)).then((u) => (unlisten = u)),
+    );
+    return () => unlisten?.();
+  }
+  const handler = (e: Event) => cb((e as CustomEvent).detail);
+  window.addEventListener("mock-pipeline-event", handler);
+  return () => window.removeEventListener("mock-pipeline-event", handler);
+}
+
+export function listenModelDownload(cb: (ev: { id: string; percent: number }) => void): () => void {
+  if (isTauri()) {
+    let unlisten: (() => void) | null = null;
+    import("@tauri-apps/api/event").then(({ listen }) =>
+      listen<{ id: string; percent: number }>("model-download", (e) => cb(e.payload)).then(
+        (u) => (unlisten = u),
+      ),
+    );
+    return () => unlisten?.();
+  }
+  const handler = (e: Event) => cb((e as CustomEvent).detail);
+  window.addEventListener("mock-model-download", handler);
+  return () => window.removeEventListener("mock-model-download", handler);
+}
