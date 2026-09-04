@@ -67,3 +67,72 @@
     "polishHint": "润色需要配置 OpenAI 兼容接口（设置页）",
     "runPage": "运行本页",
     "running": "流水线运行中…",
+    "done": "本页处理完成",
+    "failedMsg": "流水线失败：{{message}}",
+    "events": "实时事件"
+  },
+  "editor": {
+    "title": "漫画编辑器",
+    "subtitle": "底图层 + 文字层分离，逐格微调排版后导出成品。",
+    "page": "页 {{page}} / {{total}}",
+    "textLayer": "文字层",
+    "baseLayer": "底图层",
+    "fontSize": "字号",
+    "vertical": "竖排",
+    "polishDiff": "润色对比",
+    "machine": "机翻",
+    "polished": "润色",
+    "adopt": "采纳",
+    "ignore": "忽略",
+    "export": "导出成品"
+  },
+  "models": {
+    "title": "模型管理",
+    "subtitle": "应用本体不含模型；按下表从 ModelScope 下载，支持断点续传与校验。",
+    "hardware": "硬件检测",
+    "cpuCores": "CPU 核心",
+    "ram": "内存",
+    "vram": "显存",
+    "recommendedTier": "推荐档位",
+    "tier": {
+      "lite": "轻量档",
+      "standard": "标准档",
+      "pro": "专业档"
+    },
+    "role": {
+      "detect": "文本检测",
+      "cls": "方向分类",
+      "rec": "OCR 识别",
+      "dict": "识别字典",
+      "inpaint": "抹字修复",
+      "llm": "翻译模型"
+    },
+    "lang": {
+      "zh": "中文",
+      "en": "英文",
+      "ja": "日文",
+      "ko": "韩文",
+      "any": "通用"
+    },
+    "download": "下载",
+    "downloading": "下载中 {{percent}}%",
+    "verified": "已校验 ✓",
+    "size": "大小"
+  },
+  "settings": {
+    "title": "设置",
+    "subtitle": "润色接口、界面语言与主题。",
+    "language": "界面语言",
+    "polishSection": "文本润色（OpenAI 兼容接口）",
+    "baseUrl": "接口地址 (base_url)",
+    "model": "模型名称",
+    "apiKey": "API Key（仅存本机凭据管理器）",
+    "saveKey": "保存到凭据管理器",
+    "testConnection": "测试连接",
+    "testOk": "连接成功，润色节点已就绪",
+    "testFail": "连接失败：{{message}}",
+    "polishToggle": "在工作流中启用润色节点",
+    "about": "关于",
+    "version": "版本"
+  }
+}
