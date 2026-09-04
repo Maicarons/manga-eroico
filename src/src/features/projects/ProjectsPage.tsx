@@ -79,3 +79,84 @@ export default function ProjectsPage() {
                 className="ml-1 rounded border bg-transparent px-2 py-1"
                 style={{ borderColor: "var(--border)", color: "var(--text)" }}
                 value={source}
+                onChange={(e) => setSource(e.target.value)}
+              >
+                {LANGS.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm">
+              {t("projects.targetLang")}{" "}
+              <select
+                className="ml-1 rounded border bg-transparent px-2 py-1"
+                style={{ borderColor: "var(--border)", color: "var(--text)" }}
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+              >
+                {LANGS.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
+            {t("projects.createWizard.autoDetect")}
+          </p>
+          <div className="flex gap-2">
+            <button
+              data-testid="create-confirm"
+              onClick={() => void create()}
+              className="rounded-lg px-4 py-2 text-sm font-semibold"
+              style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
+            >
+              {t("common.confirm")}
+            </button>
+            <button
+              onClick={() => setCreating(false)}
+              className="rounded-lg px-4 py-2 text-sm"
+              style={{ background: "var(--surface-2)" }}
+            >
+              {t("common.cancel")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {projects.length === 0 && !creating ? (
+        <div
+          className="rounded-xl border border-dashed p-10 text-center text-sm"
+          style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+          data-testid="projects-empty"
+        >
+          {t("projects.empty")}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {projects.map((p) => (
+            <div
+              key={p.root}
+              data-testid="project-card"
+              className="cursor-pointer rounded-xl border p-4 transition-transform hover:scale-[1.01]"
+              style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+              onClick={() => {
+                setActive(p.root);
+                navigate("/workflow");
+              }}
+            >
+              <div className="text-sm font-semibold">{p.name}</div>
+              <div className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+                {p.sourceLang.toUpperCase()} → {p.targetLang.toUpperCase()} · {t("projects.pages")} {p.pages} ·{" "}
+                {t("projects.chapters")} {p.chapters}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
