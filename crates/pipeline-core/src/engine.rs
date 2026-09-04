@@ -184,3 +184,96 @@ mod tests {
         engine.set_retry_wait(1);
         let page = PageId("p1".into());
         let handle = tokio::spawn(async move { engine.run_page(&page, tx).await });
+        let mut events = Vec::new();
+        while let Some(ev) = rx.recv().await {
+            events.push(ev);
+        }
+        (handle.await.unwrap().unwrap(), events)
+    }
+
+    fn graph_with_enabled(kinds: &[StepKind]) -> PipelineGraph {
+        let mut g = PipelineGraph::default_pipeline();
+        for c in g.configs.iter_mut() {
+            c.enabled = kinds.contains(&c.kind);
+        }
+        g
+    }
+
+    #[tokio::test]
+    async fn happy_path_emits_running_completed_per_step() {
+        let (a, _) = mock(StepKind::Detect, 0);
+        let (b, _) = mock(StepKind::Render, 0);
+        let g = graph_with_enabled(&[StepKind::Detect, StepKind::Render]);
+        let (ok, events) = run(g, vec![a, b]).await;
+        assert!(ok);
+        let detect: Vec<_> = events.iter().filter(|e| e.step == StepKind::Detect).collect();
+        assert_eq!(detect[0].status, StepStatus::Running);
+        assert_eq!(detect.last().unwrap().status, StepStatus::Completed);
+        assert!(events
+            .iter()
+            .any(|e| e.step == StepKind::Render && e.status == StepStatus::Completed));
+        // disabled steps only emit Skipped, never Running/Completed
+        assert!(!events.iter().any(|e| e.step == StepKind::Ocr && e.status != StepStatus::Skipped));
+    }
+
+    #[tokio::test]
+    async fn disabled_step_is_skipped() {
+        let (a, _) = mock(StepKind::Detect, 0);
+        let (b, _) = mock(StepKind::Ocr, 0);
+        let g = graph_with_enabled(&[StepKind::Detect, StepKind::Ocr]);
+        let (ok, events) = run(g, vec![a, b]).await;
+        assert!(ok);
+        assert!(events
+            .iter()
+            .any(|e| e.step == StepKind::Polish && e.status == StepStatus::Skipped));
+        assert!(events
+            .iter()
+            .any(|e| e.step == StepKind::Render && e.status == StepStatus::Skipped));
+    }
+
+    #[tokio::test]
+    async fn reports_progress_events() {
+        let (a, _) = mock(StepKind::Detect, 0);
+        let g = graph_with_enabled(&[StepKind::Detect]);
+        let (ok, events) = run(g, vec![a]).await;
+        assert!(ok);
+        assert!(events.iter().any(|e| e.step == StepKind::Detect && e.progress == Some(50)));
+    }
+
+    #[tokio::test]
+    async fn retries_then_succeeds() {
+        let (a, calls) = mock(StepKind::Detect, 1); // fails once, succeeds on 2nd
+        let g = graph_with_enabled(&[StepKind::Detect]);
+        let (ok, events) = run(g, vec![a]).await;
+        assert!(ok);
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+        let detect_events: Vec<_> = events.iter().filter(|e| e.step == StepKind::Detect).collect();
+        assert_eq!(detect_events.last().unwrap().status, StepStatus::Completed);
+    }
+
+    #[tokio::test]
+    async fn retries_exhausted_marks_failed_and_aborts() {
+        let (a, calls) = mock(StepKind::Ocr, u32::MAX);
+        let (b, _) = mock(StepKind::Inpaint, 0);
+        let g = graph_with_enabled(&[StepKind::Ocr, StepKind::Inpaint]);
+        let (ok, events) = run(g, vec![a, b]).await;
+        assert!(!ok);
+        assert!(calls.load(Ordering::SeqCst) >= 2);
+        assert!(events
+            .iter()
+            .any(|e| e.step == StepKind::Ocr && e.status == StepStatus::Failed));
+        // aborted before inpaint even started
+        assert!(!events
+            .iter()
+            .any(|e| e.step == StepKind::Inpaint && e.status == StepStatus::Running));
+    }
+
+    #[tokio::test]
+    async fn missing_executor_fails_fast() {
+        let g = graph_with_enabled(&[StepKind::Translate]);
+        let (ok, events) = run(g, vec![]).await;
+        assert!(!ok);
+        let failed = events.iter().find(|e| e.status == StepStatus::Failed).unwrap();
+        assert!(failed.message.as_deref().unwrap().contains("no executor"));
+    }
+}
