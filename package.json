@@ -1,0 +1,19 @@
+{
+  "name": "manga-eroico",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Fully-automatic manga translation tool powered by RapidOCR + Hy-MT2. Local-first, visual workflow, AGPL-3.0.",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "dev": "pnpm --filter @manga-eroico/app dev",
+    "build": "pnpm --filter @manga-eroico/app build",
+    "test": "pnpm --filter @manga-eroico/app test",
+    "test:e2e": "pnpm --filter @manga-eroico/app test:e2e",
+    "docs:dev": "pnpm --filter @manga-eroico/docs dev",
+    "docs:build": "NODE_OPTIONS= pnpm --filter @manga-eroico/docs build",
+    "cargo:test": "cargo test --workspace"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.0"
+  }
+}
