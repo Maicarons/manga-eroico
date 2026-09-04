@@ -110,3 +110,115 @@ covering EVERY input id.";
         "source_language": ctx.source_lang,
         "target_language": ctx.target_lang,
         "glossary": glossary,
+        "bubbles": bubbles,
+    });
+
+    serde_json::json!({
+        "model": cfg.model,
+        "temperature": cfg.temperature,
+        "response_format": { "type": "json_object" },
+        "messages": [
+            { "role": "system", "content": system },
+            { "role": "user", "content": user.to_string() },
+        ],
+    })
+}
+
+/// Extracts [`PolishResult`] from an OpenAI chat-completions response.
+pub fn parse_response(body: &serde_json::Value) -> Result<PolishResult, PolishError> {
+    let content = body
+        .pointer("/choices/0/message/content")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| PolishError::BadResponse("missing choices[0].message.content".into()))?;
+    // Models sometimes wrap JSON in code fences; strip them.
+    let trimmed = content.trim();
+    let trimmed = trimmed
+        .strip_prefix("```json")
+        .or_else(|| trimmed.strip_prefix("```"))
+        .unwrap_or(trimmed)
+        .strip_suffix("```")
+        .unwrap_or(trimmed)
+        .trim();
+    let result: PolishResult =
+        serde_json::from_str(trimmed).map_err(|e| PolishError::BadResponse(format!("invalid JSON payload: {e}")))?;
+    Ok(result)
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum PolishError {
+    #[error("config error: {0}")]
+    Config(String),
+    #[error("http error: {0}")]
+    Http(#[from] reqwest::Error),
+    #[error("unexpected API response: {0}")]
+    BadResponse(String),
+    #[error("all {0} attempts failed; last error: {1}")]
+    RetriesExhausted(u32, String),
+}
+
+/// Transport abstraction so tests can fake the endpoint without HTTP.
+#[async_trait::async_trait]
+pub trait Transport: Send + Sync {
+    async fn post_chat(&self, cfg: &PolishConfig, body: serde_json::Value) -> Result<serde_json::Value, PolishError>;
+}
+
+pub struct HttpTransport;
+
+#[async_trait::async_trait]
+impl Transport for HttpTransport {
+    async fn post_chat(&self, cfg: &PolishConfig, body: serde_json::Value) -> Result<serde_json::Value, PolishError> {
+        if cfg.base_url.is_empty() || cfg.model.is_empty() {
+            return Err(PolishError::Config("base_url and model must be configured".into()));
+        }
+        let url = format!("{}/chat/completions", cfg.base_url.trim_end_matches('/'));
+        let mut req = reqwest::Client::new().post(url).json(&body);
+        if let Some(key) = &cfg.api_key {
+            req = req.bearer_auth(key);
+        }
+        let resp = req.send().await?.error_for_status()?;
+        Ok(resp.json().await?)
+    }
+}
+
+/// The polish step. Retries transient failures; after exhausting retries the
+/// caller keeps machine translations (graceful degradation, never blocks a run).
+pub struct Polisher<T: Transport> {
+    cfg: PolishConfig,
+    transport: T,
+}
+
+impl Polisher<HttpTransport> {
+    pub fn new(cfg: PolishConfig) -> Self {
+        Self { cfg, transport: HttpTransport }
+    }
+}
+
+impl<T: Transport> Polisher<T> {
+    pub fn with_transport(cfg: PolishConfig, transport: T) -> Self {
+        Self { cfg, transport }
+    }
+
+    pub async fn polish_chapter(&self, ctx: &ChapterContext) -> Result<PolishResult, PolishError> {
+        if ctx.bubbles.is_empty() {
+            return Ok(PolishResult { analysis: String::new(), items: vec![] });
+        }
+        let body = build_request_body(ctx, &self.cfg);
+        let attempts = self.cfg.max_retries + 1;
+        let mut last_err: Option<PolishError> = None;
+        for attempt in 0..attempts {
+            if attempt > 0 {
+                tokio::time::sleep(std::time::Duration::from_millis(200 * u64::from(attempt))).await;
+            }
+            match self.transport.post_chat(&self.cfg, body.clone()).await {
+                Ok(resp) => return parse_response(&resp),
+                Err(e @ PolishError::Config(_)) => return Err(e),
+                Err(e) => {
+                    tracing::warn!(attempt, error = %e, "polish attempt failed");
+                    last_err = Some(e);
+                }
+            }
+        }
+        Err(PolishError::RetriesExhausted(attempts, last_err.map(|e| e.to_string()).unwrap_or_default()))
+    }
+}
+
