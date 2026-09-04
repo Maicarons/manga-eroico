@@ -67,3 +67,72 @@
     "polishHint": "推敲には OpenAI 互換 API の設定が必要です（設定ページ）",
     "runPage": "このページを実行",
     "running": "パイプライン実行中…",
+    "done": "処理完了",
+    "failedMsg": "パイプライン失敗：{{message}}",
+    "events": "リアルタイムイベント"
+  },
+  "editor": {
+    "title": "漫画エディター",
+    "subtitle": "ベース層＋文字層を分離し、吹き出しごとに微調整して書き出し。",
+    "page": "ページ {{page}} / {{total}}",
+    "textLayer": "文字層",
+    "baseLayer": "ベース層",
+    "fontSize": "フォントサイズ",
+    "vertical": "縦書き",
+    "polishDiff": "推敲差分",
+    "machine": "機械翻訳",
+    "polished": "推敲後",
+    "adopt": "採用",
+    "ignore": "却下",
+    "export": "書き出し"
+  },
+  "models": {
+    "title": "モデル管理",
+    "subtitle": "アプリ本体にモデルは含まれません。ModelScope からダウンロード（レジューム・検証付き）。",
+    "hardware": "ハードウェア",
+    "cpuCores": "CPU コア",
+    "ram": "メモリ",
+    "vram": "VRAM",
+    "recommendedTier": "推奨ティア",
+    "tier": {
+      "lite": "ライト",
+      "standard": "スタンダード",
+      "pro": "プロ"
+    },
+    "role": {
+      "detect": "テキスト検出",
+      "cls": "方向分類",
+      "rec": "OCR 認識",
+      "dict": "辞書",
+      "inpaint": "文字消し",
+      "llm": "翻訳モデル"
+    },
+    "lang": {
+      "zh": "中国語",
+      "en": "英語",
+      "ja": "日本語",
+      "ko": "韓国語",
+      "any": "共通"
+    },
+    "download": "ダウンロード",
+    "downloading": "ダウンロード中 {{percent}}%",
+    "verified": "検証済み ✓",
+    "size": "サイズ"
+  },
+  "settings": {
+    "title": "設定",
+    "subtitle": "推敲 API・表示言語・テーマ。",
+    "language": "表示言語",
+    "polishSection": "文章推敲（OpenAI 互換 API）",
+    "baseUrl": "Base URL",
+    "model": "モデル名",
+    "apiKey": "API Key（OS の資格情報マネージャーに保存）",
+    "saveKey": "資格情報マネージャーに保存",
+    "testConnection": "接続テスト",
+    "testOk": "接続成功 — 推敲ノード利用可能",
+    "testFail": "接続失敗：{{message}}",
+    "polishToggle": "ワークフローで推敲ノードを有効化",
+    "about": "情報",
+    "version": "バージョン"
+  }
+}
