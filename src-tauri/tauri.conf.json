@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "manga-eroico",
+  "version": "0.1.0",
+  "identifier": "dev.maicarons.manga-eroico",
+  "build": {
+    "beforeDevCommand": "pnpm --filter @manga-eroico/app dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "pnpm --filter @manga-eroico/app build",
+    "frontendDist": "../src/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "manga-eroico",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 640,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "icon": []
+  }
+}
