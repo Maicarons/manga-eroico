@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rust:
+    name: Rust test & lint (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Format check
+        run: cargo fmt --all -- --check
+        continue-on-error: true
+      - name: Clippy
+        run: cargo clippy --workspace --exclude manga-eroico -- -D warnings
+        continue-on-error: true
+      - name: Unit tests
+        run: cargo test --workspace --exclude manga-eroico --locked
+
+  frontend:
+    name: Frontend test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: i18n key completeness + unit tests
+        run: pnpm test
+      - name: Type check & build
+        run: pnpm build
+
+  e2e:
+    name: E2E (web, mocked pipeline)
+    runs-on: ubuntu-latest
+    needs: [frontend]
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Run Playwright
+        working-directory: tests/e2e
+        run: pnpm exec playwright test --config playwright.config.ts
+
+  no-models-in-bundle:
+    name: Release bundle contains no models
+    runs-on: ubuntu-latest
+    needs: [rust, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert no model files tracked in git
+        run: |
+          ! git ls-files | grep -iE '\.(onnx|gguf|ckpt|safetensors|bin)$'
+      - name: Assert models dir is gitignored
+        run: git check-ignore -v models/test.onnx
