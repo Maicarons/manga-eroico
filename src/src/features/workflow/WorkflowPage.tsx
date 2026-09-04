@@ -88,3 +88,93 @@ export default function WorkflowPage() {
 
   const toggle = useCallback(
     (step: Step) => {
+      setStates((prev) => {
+        const enabled = !prev[step].enabled;
+        void api.setNodeEnabled(step, enabled);
+        return { ...prev, [step]: { ...prev[step], enabled } };
+      });
+    },
+    [],
+  );
+
+  const runPage = async () => {
+    setRunning(true);
+    try {
+      await api.runPipelinePage("pg_demo");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <div data-testid="workflow-page" className="flex h-full flex-col">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{t("workflow.title")}</h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("workflow.subtitle")}
+          </p>
+        </div>
+        <button
+          data-testid="run-page"
+          onClick={() => void runPage()}
+          disabled={running}
+          className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
+          style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
+        >
+          {running ? t("workflow.running") : `▶ ${t("workflow.runPage")}`}
+        </button>
+      </div>
+
+      <div
+        className="h-80 rounded-xl border"
+        style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+        data-testid="workflow-canvas"
+      >
+        <ReactFlow nodes={buildNodes(states, labels)} edges={EDGES} fitView proOptions={{ hideAttribution: true }}>
+          <Background />
+          <Controls showInteractive={false} />
+        </ReactFlow>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-6" data-testid="node-toggles">
+        {STEPS.map((step) => (
+          <button
+            key={step}
+            data-testid={`toggle-${step}`}
+            onClick={() => toggle(step)}
+            className="rounded-lg border px-3 py-2 text-xs"
+            style={{
+              borderColor: "var(--border)",
+              background: states[step].enabled ? STEP_COLORS[step] : "var(--surface-2)",
+              color: states[step].enabled ? "#fff" : "var(--text-muted)",
+            }}
+          >
+            {states[step].enabled ? "🟢" : "⚪"} {labels[step]}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
+        {activeRoot ?? "(no project)"} · {t("workflow.enableHint")} · {t("workflow.polishHint")}
+      </div>
+
+      <div
+        className="mt-2 max-h-40 overflow-auto rounded-xl border p-3 font-mono text-xs"
+        style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
+        data-testid="event-log"
+      >
+        {events.length === 0 ? (
+          <span style={{ color: "var(--text-muted)" }}>{t("workflow.events")}</span>
+        ) : (
+          events.map((ev, i) => (
+            <div key={i}>
+              [{ev.step}] {ev.status}
+              {ev.progress != null ? ` ${ev.progress}%` : ""}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
