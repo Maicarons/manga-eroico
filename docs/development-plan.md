@@ -268,3 +268,39 @@ M1 阶段调用 **ui-ux-pro-max**（风格/色板/组件选型）与 **frontend-
 | **M6+ 展望** | 在线色板/字体市场、Web GPU 推理、插件系统、LLM 校对（Hy-MT2 指令风格化） | — |
 
 > 排期为相对节奏，按 M0→M5 顺序推进，每个里程碑结束做一次回顾并同步 docs。
+
+---
+
+## 11. 许可证与合规
+
+- 本项目代码：**AGPL-3.0**（满足要求 1）。
+- 第三方模型许可证登记到 `docs/reference/licenses.md`：
+  - RapidOCR / PaddleOCR 模型：Apache-2.0 ✅
+  - Hy-MT2：腾讯混元开源协议（使用前核对其附加条款，登记原文链接）
+  - comic-text-detector / LaMa：跟随上游发布物许可，逐项登记
+- 仅**调用模型权重**、不复制 GPL 项目的源码，规避许可证传染冲突；Koharu/manga-image-translator 仅作行为参考。
+
+---
+
+## 12. 风险与对策
+
+| 风险 | 对策 |
+|---|---|
+| `ort` CUDA/DirectML EP 在 Windows 打包后的动态库地狱 | 采用 `load-dynamic` 策略 + 运行时下载对应 EP 运行库；CI 中加冒烟断言 |
+| Hy-MT2 GGUF 转换质量/上游未提供 | 优先用官方已发布量化版；必要时自行 llama.cpp 转换并登记脚本 |
+| 竖排 CJK 排版复杂度高 | M2 先做横排 + 简单竖排，M4 迭代标点挤压/自动换行细节 |
+| comic-text-detector 模型较老 | 保留 det 节点可替换设计（trait 抽象），后续可换 PP-OCRv5 det 双通道 |
+| ModelScope 下载在海外不稳定 | 支持 HF 镜像切换 + 断点续传 |
+| 范围蔓延（五段全自研） | 严格执行里程碑判据；渲染/编辑器细节允许 M4 后继续打磨 |
+
+---
+
+## 13. 参考资料
+
+- RapidOCR（RapidAI）：https://github.com/RapidAI/RapidOCR（PP-OCRv5/v6 ONNX 模型清单 `python/rapidocr/default_models.yaml`）
+- Hy-MT2（腾讯混元）：https://github.com/Tencent-Hunyuan/Hy-MT2 ｜ ModelScope 合集：https://modelscope.cn/collections/Tencent-Hunyuan/Hy-MT2
+- manga-image-translator（检测/修复模型发布物）：https://github.com/zyddnys/manga-image-translator
+- Koharu（Rust 漫画翻译先行者）：https://github.com/mayocream/koharu
+- ort（Rust ONNX Runtime 绑定）：https://ort.pyke.io
+- Tauri 2：https://v2.tauri.app ｜ React Flow：https://xyflow.com ｜ Konva：https://konvajs.org
+- VitePress：https://vitepress.dev
