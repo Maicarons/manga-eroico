@@ -1,0 +1,69 @@
+{
+  "common": {
+    "appName": "manga-eroico",
+    "tagline": "Fully-automatic manga translation · local-first · visual workflow",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "close": "Close",
+    "retry": "Retry",
+    "loading": "Loading…",
+    "notFound": "Page not found",
+    "backHome": "Back home"
+  },
+  "nav": {
+    "projects": "Projects",
+    "workflow": "Workflow",
+    "editor": "Editor",
+    "models": "Models",
+    "settings": "Settings",
+    "theme": {
+      "label": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "subtitle": "Every translation job is a self-contained project: pages, progress and glossary live inside it.",
+    "newProject": "New project",
+    "open": "Open",
+    "recent": "Recent projects",
+    "empty": "No projects yet. Click “New project” to start your first translation.",
+    "namePlaceholder": "Project name, e.g. Attack on Titan Vol.1",
+    "sourceLang": "Source language",
+    "targetLang": "Target language",
+    "progress": "Progress",
+    "lastOpened": "Last opened",
+    "chapters": "Chapters",
+    "pages": "Pages",
+    "createWizard": {
+      "step1": "Pick manga images",
+      "step2": "Name & languages",
+      "step3": "Hardware check & tier",
+      "pickImages": "Choose image files",
+      "autoDetect": "Language and tier detected automatically"
+    }
+  },
+  "workflow": {
+    "title": "Translation workflow",
+    "subtitle": "The whole pipeline at a glance: inspect each node, toggle it, re-run incrementally.",
+    "detect": "Text detection",
+    "ocr": "OCR",
+    "inpaint": "Inpainting",
+    "translate": "Translation",
+    "polish": "Polish",
+    "render": "Rendering",
+    "status": {
+      "pending": "Pending",
+      "running": "Running",
+      "completed": "Completed",
+      "skipped": "Skipped",
+      "failed": "Failed"
+    },
+    "enableHint": "Toggles are saved into the project config",
+    "polishHint": "Polish needs an OpenAI-compatible endpoint (see Settings)",
+    "runPage": "Run this page",
+    "running": "Pipeline running…",
