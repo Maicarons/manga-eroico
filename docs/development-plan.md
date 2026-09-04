@@ -28,3 +28,33 @@ manga-eroico 是一款**本地优先、全流程可视化**的漫画自动翻译
 
 | 项目 | 形态 | 短板（本项目的切入點） |
 |---|---|---|
+| manga-image-translator | Python CLI/Web | 依赖重（~15GB Docker 镜像）、无可视化工作流 |
+| BallonsTranslator | Python 桌面 | 非 Rust、打包体积大 |
+| Koharu | Rust CLI | 无 GUI、无可视化、模型管理弱 |
+
+manga-eroico = **Rust 性能与体积** + **可视化节点工作流** + **模型管理器（按硬件自动选型）**。
+
+---
+
+## 2. 总体架构
+
+### 2.1 架构分层
+
+```
+┌────────────────────────────────────────────────────────┐
+│  前端 React 19 + TypeScript（Tauri WebView）             │
+│  ├─ 工作流画布（React Flow 节点图）                       │
+│  ├─ 工程库（工程管理：新建/重开/章节树/进度）              │
+│  ├─ 漫画编辑器（Konva.js 画布：气泡框/文字层/字体）         │
+│  ├─ 模型管理器 UI（下载/校验/切换档位）                    │
+│  └─ 批量队列 & 导出中心                                   │
+├────────────────  Tauri IPC（invoke / event）  ──────────┤
+│  Rust 后端（Cargo workspace）                            │
+│  ├─ pipeline-core   工作流 DAG 引擎（暂停/恢复/重试）      │
+│  ├─ me-project      工程管理（.mepro 读写、工件版本/回滚）   │
+│  ├─ detect / ocr / inpaint / translate / polish / render │
+│  │    （统一 ModelProvider trait，底层 ort / llama.cpp）  │
+│  ├─ model-manager  ModelScope 下载+系统检测+档位选型      │
+│  └─ tauri host     命令注册、事件推送、文件系统访问         │
+└────────────────────────────────────────────────────────┘
+```
