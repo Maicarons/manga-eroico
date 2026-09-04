@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/* class-based dark mode driven by <html data-theme="dark"> */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+:root {
+  /* light theme tokens */
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef0f4;
+  --text: #1a1d23;
+  --text-muted: #5c6470;
+  --accent: #7c5cff;
+  --accent-contrast: #ffffff;
+  --border: #dfe3ea;
+  --danger: #d64545;
+  --ok: #1f9d55;
+}
+
+[data-theme="dark"] {
+  --bg: #121418;
+  --surface: #1b1e24;
+  --surface-2: #232730;
+  --text: #e8eaef;
+  --text-muted: #9aa3b2;
+  --accent: #9d86ff;
+  --accent-contrast: #14121f;
+  --border: #2c313c;
+  --danger: #e06c6c;
+  --ok: #4cc38a;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    "Inter",
+    "Noto Sans SC",
+    "Noto Sans JP",
+    "Noto Sans KR",
+    system-ui,
+    sans-serif;
+}
