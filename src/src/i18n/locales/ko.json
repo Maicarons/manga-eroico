@@ -67,3 +67,72 @@
     "polishHint": "다듬기에는 OpenAI 호환 API 설정이 필요합니다 (설정 페이지)",
     "runPage": "이 페이지 실행",
     "running": "파이프라인 실행 중…",
+    "done": "처리 완료",
+    "failedMsg": "파이프라인 실패: {{message}}",
+    "events": "실시간 이벤트"
+  },
+  "editor": {
+    "title": "만화 편집기",
+    "subtitle": "베이스 레이어 + 텍스트 레이어 분리, 말풍선별 미세 조정 후 내보내기.",
+    "page": "페이지 {{page}} / {{total}}",
+    "textLayer": "텍스트 레이어",
+    "baseLayer": "베이스 레이어",
+    "fontSize": "글자 크기",
+    "vertical": "세로쓰기",
+    "polishDiff": "다듬기 비교",
+    "machine": "기계 번역",
+    "polished": "다듬은 결과",
+    "adopt": "채택",
+    "ignore": "무시",
+    "export": "내보내기"
+  },
+  "models": {
+    "title": "모델 관리",
+    "subtitle": "앱 본체에는 모델이 포함되지 않습니다. ModelScope에서 이어받기·검증과 함께 다운로드하세요.",
+    "hardware": "하드웨어",
+    "cpuCores": "CPU 코어",
+    "ram": "RAM",
+    "vram": "VRAM",
+    "recommendedTier": "권장 등급",
+    "tier": {
+      "lite": "라이트",
+      "standard": "스탠다드",
+      "pro": "프로"
+    },
+    "role": {
+      "detect": "텍스트 검출",
+      "cls": "방향 분류",
+      "rec": "OCR 인식",
+      "dict": "사전",
+      "inpaint": "글자 지우기",
+      "llm": "번역 모델"
+    },
+    "lang": {
+      "zh": "중국어",
+      "en": "영어",
+      "ja": "일본어",
+      "ko": "한국어",
+      "any": "공용"
+    },
+    "download": "다운로드",
+    "downloading": "다운로드 중 {{percent}}%",
+    "verified": "검증 완료 ✓",
+    "size": "크기"
+  },
+  "settings": {
+    "title": "설정",
+    "subtitle": "다듬기 API, 인터페이스 언어, 테마.",
+    "language": "인터페이스 언어",
+    "polishSection": "문장 다듬기 (OpenAI 호환 API)",
+    "baseUrl": "Base URL",
+    "model": "모델 이름",
+    "apiKey": "API Key (OS 자격 증명 관리자에 저장)",
+    "saveKey": "자격 증명 관리자에 저장",
+    "testConnection": "연결 테스트",
+    "testOk": "연결 성공 — 다듬기 노드 사용 가능",
+    "testFail": "연결 실패: {{message}}",
+    "polishToggle": "워크플로에서 다듬기 노드 활성화",
+    "about": "정보",
+    "version": "버전"
+  }
+}
