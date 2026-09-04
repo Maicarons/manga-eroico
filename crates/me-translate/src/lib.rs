@@ -79,3 +79,84 @@ pub fn parse_output(output: &str, items: &[TranslateItem]) -> Vec<(String, Strin
             (i.id.clone(), t)
         })
         .collect()
+}
+
+/// Provider trait; `local-llm` feature binds llama.cpp sessions here.
+pub trait TranslateProvider: Send + Sync {
+    fn translate_batch(&self, prompt: &str) -> anyhow_lite::Result<String>;
+}
+
+pub mod anyhow_lite {
+    pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+}
+
+/// Mock "model" that echoes a tagged translation — tests / web preview.
+pub struct MockTranslate;
+
+impl TranslateProvider for MockTranslate {
+    fn translate_batch(&self, prompt: &str) -> anyhow_lite::Result<String> {
+        let mut out = Vec::new();
+        for line in prompt.lines() {
+            if let Some(rest) = line.strip_prefix('[') {
+                if let Some(close) = rest.find(']') {
+                    let id = &rest[..close];
+                    let text = rest[close + 1..].trim();
+                    out.push(format!("[{id}] <{text}>"));
+                }
+            }
+        }
+        Ok(out.join("\n"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn items() -> Vec<TranslateItem> {
+        vec![
+            TranslateItem { id: "b1".into(), source_text: "こんにちは".into() },
+            TranslateItem { id: "b2".into(), source_text: "またね".into() },
+        ]
+    }
+
+    #[test]
+    fn prompt_contains_glossary_and_order() {
+        let mut g = BTreeMap::new();
+        g.insert("ハルカ".to_string(), "Halca".to_string());
+        let p = build_prompt("ja", "en", &g, &items());
+        assert!(p.contains("ja to en"));
+        assert!(p.contains("ハルカ => Halca"));
+        assert!(p.contains("[b1] こんにちは"));
+        assert!(p.contains("[b2] またね"));
+    }
+
+    #[test]
+    fn prompt_without_glossary_has_no_block() {
+        let p = build_prompt("ja", "zh", &BTreeMap::new(), &items());
+        assert!(!p.contains("Glossary"));
+    }
+
+    #[test]
+    fn parse_output_maps_ids() {
+        let out = "[b1] 你好\n[b2] 再见";
+        let parsed = parse_output(out, &items());
+        assert_eq!(parsed[0], ("b1".into(), "你好".into()));
+        assert_eq!(parsed[1], ("b2".into(), "再见".into()));
+    }
+
+    #[test]
+    fn parse_output_falls_back_to_source_on_missing_id() {
+        let out = "[b1] 你好"; // b2 missing
+        let parsed = parse_output(out, &items());
+        assert_eq!(parsed[1], ("b2".into(), "またね".into()));
+    }
+
+    #[test]
+    fn mock_roundtrip() {
+        let p = build_prompt("ja", "en", &BTreeMap::new(), &items());
+        let raw = MockTranslate.translate_batch(&p).unwrap();
+        let parsed = parse_output(&raw, &items());
+        assert_eq!(parsed[0].1, "<こんにちは>");
+    }
+}
