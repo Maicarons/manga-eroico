@@ -111,3 +111,116 @@ impl Project {
     /// Opens an existing project, validating schema compatibility and running
     /// migrations when needed.
     pub fn open(root: impl Into<PathBuf>) -> Result<Self, ProjectError> {
+        let root = root.into();
+        let marker = root.join("project.json");
+        if !marker.exists() {
+            return Err(ProjectError::NotAProject(root));
+        }
+        let raw = std::fs::read(&marker)?;
+        let file: ProjectFile = serde_json::from_slice(&raw)?;
+        if file.schema_version > CURRENT_SCHEMA_VERSION {
+            return Err(ProjectError::SchemaTooNew {
+                found: file.schema_version,
+                supported: CURRENT_SCHEMA_VERSION,
+            });
+        }
+        let mut project = Self { root, file };
+        migrate(&mut project);
+        Ok(project)
+    }
+
+    pub fn save(&mut self) -> Result<(), ProjectError> {
+        let mut file = self.file.clone();
+        file.updated_at = Utc::now().to_rfc3339();
+        let bytes = serde_json::to_vec_pretty(&file)?;
+        std::fs::write(self.root.join("project.json"), bytes)?;
+        self.file = file;
+        Ok(())
+    }
+
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    pub fn file(&self) -> &ProjectFile {
+        &self.file
+    }
+
+    // ---- pages ----
+
+    /// Registers an imported image; the physical file must already exist under
+    /// `pages/` (the import step copies it there content-addressed).
+    pub fn add_page(&mut self, file_name: &str, width: u32, height: u32) -> String {
+        let id = format!("pg_{}", uuid::Uuid::new_v4().simple());
+        self.file.pages.push(Page { id: id.clone(), file_name: file_name.into(), width, height });
+        id
+    }
+
+    pub fn page(&self, id: &str) -> Option<&Page> {
+        self.file.pages.iter().find(|p| p.id == id)
+    }
+
+    // ---- chapters ----
+
+    pub fn add_chapter(&mut self, title: &str, page_ids: Vec<String>) -> String {
+        let id = format!("ch_{}", uuid::Uuid::new_v4().simple());
+        self.file.chapters.push(Chapter { id: id.clone(), title: title.into(), page_ids });
+        id
+    }
+
+    // ---- glossary ----
+
+    pub fn set_glossary_term(&mut self, term: &str, translation: &str) {
+        self.file.glossary.insert(term.into(), translation.into());
+    }
+
+    // ---- pipeline config (workflow canvas mirror) ----
+
+    pub fn set_pipeline(&mut self, graph: PipelineGraph) {
+        self.file.pipeline = graph;
+    }
+
+    // ---- artifacts (node x page x version) ----
+
+    /// Persists an artifact (JSON or image) for `node`/`page` as a new version
+    /// and returns its version number (1-based).
+    pub fn put_artifact(&self, node: &str, page_id: &str, bytes: &[u8], ext: &str) -> Result<u32, ProjectError> {
+        let dir = self.root.join("artifacts").join(node).join(page_id);
+        std::fs::create_dir_all(&dir)?;
+        let version = next_version(&dir)?;
+        let path = dir.join(format!("v{version:04}.{ext}"));
+        std::fs::write(path, bytes)?;
+        Ok(version)
+    }
+
+    /// Latest artifact bytes for `node`/`page`, if any.
+    pub fn latest_artifact(&self, node: &str, page_id: &str) -> Result<Option<(u32, Vec<u8>)>, ProjectError> {
+        let dir = self.root.join("artifacts").join(node).join(page_id);
+        if !dir.exists() {
+            return Ok(None);
+        }
+        let mut versions: Vec<u32> = list_versions(&dir)?;
+        versions.sort_unstable();
+        match versions.last() {
+            Some(v) => {
+                // find the file with that version (any extension)
+                for entry in std::fs::read_dir(&dir)? {
+                    let entry = entry?;
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    if let Some(vn) = name.strip_prefix('v').and_then(|s| s.split('.').next()) {
+                        if vn.parse::<u32>().ok() == Some(*v) {
+                            return Ok(Some((*v, std::fs::read(entry.path())?)));
+                        }
+                    }
+                }
+                Ok(None)
+            }
+            None => Ok(None),
+        }
+    }
+
+    // ---- history ----
+
+    /// Appends an operation record to `history/log.jsonl` (append-only).
+    pub fn log_operation(&self, op: &str, detail: &serde_json::Value) -> Result<(), ProjectError> {
+        use std::io::Write;
