@@ -1,0 +1,12 @@
+[package]
+name = "me-ocr"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "RapidOCR (PP-OCRv5) text recognition: CTC decoding, provider trait, ONNX backend behind a feature"
+
+[dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
