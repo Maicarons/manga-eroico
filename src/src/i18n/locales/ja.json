@@ -1,0 +1,69 @@
+{
+  "common": {
+    "appName": "manga-eroico",
+    "tagline": "漫画全自動翻訳 · ローカル優先 · ワークフロー可視化",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "delete": "削除",
+    "close": "閉じる",
+    "retry": "再試行",
+    "loading": "読み込み中…",
+    "notFound": "ページが見つかりません",
+    "backHome": "ホームへ戻る"
+  },
+  "nav": {
+    "projects": "プロジェクト",
+    "workflow": "ワークフロー",
+    "editor": "エディター",
+    "models": "モデル管理",
+    "settings": "設定",
+    "theme": {
+      "label": "テーマ",
+      "light": "ライト",
+      "dark": "ダーク",
+      "system": "システムに従う"
+    }
+  },
+  "projects": {
+    "title": "プロジェクト",
+    "subtitle": "各翻訳作業は独立したプロジェクトとして管理されます。",
+    "newProject": "新規プロジェクト",
+    "open": "開く",
+    "recent": "最近のプロジェクト",
+    "empty": "プロジェクトがありません。「新規プロジェクト」から始めましょう。",
+    "namePlaceholder": "プロジェクト名（例：進撃の巨人 Vol.1）",
+    "sourceLang": "元言語",
+    "targetLang": "訳言語",
+    "progress": "進捗",
+    "lastOpened": "最終オープン",
+    "chapters": "章",
+    "pages": "ページ",
+    "createWizard": {
+      "step1": "漫画画像を選択",
+      "step2": "名前と言語",
+      "step3": "ハードウェア判定",
+      "pickImages": "画像ファイルを選択",
+      "autoDetect": "言語と推奨ティアを自動判定しました"
+    }
+  },
+  "workflow": {
+    "title": "翻訳ワークフロー",
+    "subtitle": "各ノードの状態確認・オン/オフ・再実行が可能です。",
+    "detect": "テキスト検出",
+    "ocr": "OCR",
+    "inpaint": "文字消し",
+    "translate": "機械翻訳",
+    "polish": "文章推敲",
+    "render": "組版レンダリング",
+    "status": {
+      "pending": "待機中",
+      "running": "実行中",
+      "completed": "完了",
+      "skipped": "スキップ",
+      "failed": "失敗"
+    },
+    "enableHint": "トグルはプロジェクト設定に保存されます",
+    "polishHint": "推敲には OpenAI 互換 API の設定が必要です（設定ページ）",
+    "runPage": "このページを実行",
+    "running": "パイプライン実行中…",
