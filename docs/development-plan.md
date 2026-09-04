@@ -238,3 +238,33 @@ M1 阶段调用 **ui-ux-pro-max**（风格/色板/组件选型）与 **frontend-
 | 前端单测 | Vitest + Testing Library | 组件、状态 store、i18n key 完整性 |
 | E2E（Web 层） | Playwright | 工作流画布交互、模型管理器向导、编辑器操作 |
 | E2E（App 层） | tauri-driver（WebDriver） | 打包后真应用冒烟：导入图 → 跑 mock pipeline → 导出 |
+| 金样测试 | `tests/golden/` | 渲染层对固定输入输出 PNG，感知哈希（pHash）比对阈值 |
+| 门槛 | CI 必过 | Rust 单测 + 前端单测 + Web E2E + clippy -D warnings + tsc |
+
+---
+
+## 9. CI/CD 与发布
+
+| Workflow | 触发 | 内容 |
+|---|---|---|
+| `ci.yml` | PR / push main | lint（clippy/prettier/eslint）→ Rust test（3 平台矩阵）→ 前端 test + Web E2E → tauri build 试打包（验证不含模型：检查产物体积与内容） |
+| `release.yml` | tag `v*` | tauri-action 三平台签名打包（msi/nsis、dmg、AppImage/deb）→ GitHub Release 草稿 |
+| `docs.yml` | push main（docs/ 变更） | VitePress build（多 locale）→ 部署 GitHub Pages |
+
+模型分发**只走 ModelScope**，Release 产物仅含应用本体（预期 < 50MB 量级，正可作为「不含模型」的 CI 断言）。
+
+---
+
+## 10. 里程碑规划
+
+| 里程碑 | 内容 | 交付判据 |
+|---|---|---|
+| **M0 地基**（第 1–2 周） | 仓库初始化（AGPL LICENSE、workspace、pnpm、VitePress 骨架）、Tauri 空壳跑通三平台、CI 三条流水线上线、i18n 骨架四语言 | CI 全绿；空应用可打包 |
+| **M1 设计 + 模型管理**（第 2–4 周） | 调用 UI/UX skill 产出设计系统；模型管理器（系统检测/档位/ModelScope 下载/校验/续传） | 空应用内可完成模型下载向导 |
+| **M2 管线核心**（第 4–7 周） | 检测→OCR→修复→翻译→渲染五段 crates 打通（先 CPU 档位）+ `me-project` 工程读写 + **润色节点**（OpenAI 兼容 client、章节上下文聚合、降级重试），DAG 引擎 + 事件流 | CLI（me-server）能创建工程→整页出译图→保存重开；润色节点经 mock 接口联调通过 |
+| **M3 可视化工作流 + 编辑器 + 工程库**（第 7–10 周） | React Flow 画布接通管线事件（含润色开关与 diff 视图）；Konva 编辑器（文字层编辑/竖排/导出）；工程库首页 + 章节树 + 进度矩阵 | 全自动翻译一页并在编辑器微调导出；润色可开关并逐条采纳 |
+| **M4 批量 + 打磨**（第 10–13 周） | 整本/文件夹批量队列、章节级增量重跑与版本回滚、GPU 档位（CUDA/Metal/DirectML）、文档站四语言补全、UI/UX 走查 | 整本漫画 30 分钟内可完成翻译（含可选润色） |
+| **M5 测试加固 + v0.1 发布**（第 13–15 周） | E2E 全覆盖、金样测试、性能 profile、README/文档终稿、GitHub Release v0.1 | 三平台安装包可下载可用 |
+| **M6+ 展望** | 在线色板/字体市场、Web GPU 推理、插件系统、LLM 校对（Hy-MT2 指令风格化） | — |
+
+> 排期为相对节奏，按 M0→M5 顺序推进，每个里程碑结束做一次回顾并同步 docs。
