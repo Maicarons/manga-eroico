@@ -70,8 +70,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - name: Run Playwright
-        working-directory: tests/e2e
-        run: pnpm exec playwright test --config playwright.config.ts
+        working-directory: src
+        run: pnpm exec playwright test --config ../tests/e2e/playwright.config.ts
 
   no-models-in-bundle:
     name: Release bundle contains no models
