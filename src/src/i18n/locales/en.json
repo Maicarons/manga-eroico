@@ -67,3 +67,72 @@
     "polishHint": "Polish needs an OpenAI-compatible endpoint (see Settings)",
     "runPage": "Run this page",
     "running": "Pipeline running…",
+    "done": "Page processed",
+    "failedMsg": "Pipeline failed: {{message}}",
+    "events": "Live events"
+  },
+  "editor": {
+    "title": "Manga editor",
+    "subtitle": "Base layer + text layer, tweak lettering per bubble and export.",
+    "page": "Page {{page}} / {{total}}",
+    "textLayer": "Text layer",
+    "baseLayer": "Base layer",
+    "fontSize": "Font size",
+    "vertical": "Vertical",
+    "polishDiff": "Polish diff",
+    "machine": "Machine",
+    "polished": "Polished",
+    "adopt": "Adopt",
+    "ignore": "Ignore",
+    "export": "Export"
+  },
+  "models": {
+    "title": "Model manager",
+    "subtitle": "The app ships no models; download them from ModelScope with resume & checksum.",
+    "hardware": "Hardware",
+    "cpuCores": "CPU cores",
+    "ram": "RAM",
+    "vram": "VRAM",
+    "recommendedTier": "Recommended tier",
+    "tier": {
+      "lite": "Lite",
+      "standard": "Standard",
+      "pro": "Pro"
+    },
+    "role": {
+      "detect": "Detection",
+      "cls": "Direction cls",
+      "rec": "OCR rec",
+      "dict": "Dictionary",
+      "inpaint": "Inpainting",
+      "llm": "Translation"
+    },
+    "lang": {
+      "zh": "Chinese",
+      "en": "English",
+      "ja": "Japanese",
+      "ko": "Korean",
+      "any": "Universal"
+    },
+    "download": "Download",
+    "downloading": "Downloading {{percent}}%",
+    "verified": "Verified ✓",
+    "size": "Size"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Polish endpoint, UI language and theme.",
+    "language": "UI language",
+    "polishSection": "Text polish (OpenAI-compatible API)",
+    "baseUrl": "Base URL",
+    "model": "Model name",
+    "apiKey": "API Key (stored in OS credential manager)",
+    "saveKey": "Save to credential manager",
+    "testConnection": "Test connection",
+    "testOk": "Connected — polish node is ready",
+    "testFail": "Connection failed: {{message}}",
+    "polishToggle": "Enable polish node in the workflow",
+    "about": "About",
+    "version": "Version"
+  }
+}
