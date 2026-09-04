@@ -105,3 +105,110 @@ pub async fn create_project(
     Ok(project.file().clone())
 }
 
+#[tauri::command]
+pub async fn open_project(state: State<'_, AppState>, root: String) -> Result<me_project::ProjectFile, String> {
+    let project = Project::open(PathBuf::from(&root)).map_err(|e| e.to_string())?;
+    *state.open_project.lock() = Some(PathBuf::from(&root));
+    Ok(project.file().clone())
+}
+
+#[tauri::command]
+pub async fn save_project(state: State<'_, AppState>) -> Result<(), String> {
+    let path = state.open_project.lock().clone().ok_or("no project open")?;
+    Project::open(path).map_err(|e| e.to_string())?.save().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn add_page(state: State<'_, AppState>, file_name: String, width: u32, height: u32) -> Result<String, String> {
+    let path = state.open_project.lock().clone().ok_or("no project open")?;
+    let mut p = Project::open(path).map_err(|e| e.to_string())?;
+    let id = p.add_page(&file_name, width, height);
+    p.log_operation("add_page", &serde_json::json!({ "id": id })).map_err(|e| e.to_string())?;
+    p.save().map_err(|e| e.to_string())?;
+    Ok(id)
+}
+
+#[tauri::command]
+pub async fn add_chapter(state: State<'_, AppState>, title: String, page_ids: Vec<String>) -> Result<String, String> {
+    let path = state.open_project.lock().clone().ok_or("no project open")?;
+    let mut p = Project::open(path).map_err(|e| e.to_string())?;
+    let id = p.add_chapter(&title, page_ids);
+    p.save().map_err(|e| e::s(&e))?;
+    Ok(id)
+}
+
+// helper shim (kept tiny)
+mod e {
+    pub fn s(_: &dyn std::fmt::Debug) -> String {
+        "save failed".into()
+    }
+}
+
+#[tauri::command]
+pub async fn set_glossary_term(state: State<'_, AppState>, term: String, translation: String) -> Result<(), String> {
+    let path = state.open_project.lock().clone().ok_or("no project open")?;
+    let mut p = Project::open(path).map_err(|e| e.to_string())?;
+    p.set_glossary_term(&term, &translation);
+    p.save().map_err(|e| e.to_string())
+}
+
+// ---------- pipeline ----------
+
+#[tauri::command]
+pub async fn set_node_enabled(state: State<'_, AppState>, node: String, enabled: bool) -> Result<(), String> {
+    let kind = match node.as_str() {
+        "detect" => StepKind::Detect,
+        "ocr" => StepKind::Ocr,
+        "inpaint" => StepKind::Inpaint,
+        "translate" => StepKind::Translate,
+        "polish" => StepKind::Polish,
+        "render" => StepKind::Render,
+        _ => return Err(format!("unknown node {node}")),
+    };
+    let path = state.open_project.lock().clone().ok_or("no project open")?;
+    let mut p = Project::open(&path).map_err(|e| e.to_string())?;
+    let mut graph = p.file().pipeline.clone();
+    if !graph.set_enabled(kind, enabled) {
+        return Err(format!("node {node} not in pipeline"));
+    }
+    p.set_pipeline(graph);
+    p.log_operation("set_node_enabled", &serde_json::json!({ "node": node, "enabled": enabled }))
+        .map_err(|e| e.to_string())?;
+    p.save().map_err(|e| e.to_string())
+}
+
+/// Runs the full six-step pipeline (mock providers until the `onnx` /
+/// `local-llm` features ship enabled builds) for one page, streaming
+/// [`PipelineEvent`]s on the `pipeline-event` channel.
+#[tauri::command]
+pub async fn run_pipeline_page(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    page_id: String,
+) -> Result<bool, String> {
+    let path = state.open_project.lock().clone().ok_or("no project open")?;
+    let project = Project::open(path).map_err(|e| e.to_string())?;
+    let graph: PipelineGraph = project.file().pipeline.clone();
+
+    let steps: Vec<Box<dyn Step>> = vec![
+        Box::new(DetectStep),
+        Box::new(OcrStep),
+        Box::new(InpaintStep),
+        Box::new(TranslateStep),
+        Box::new(NoopPolish),
+        Box::new(RenderStep),
+    ];
+    let engine = Engine::new(graph, steps);
+    let (tx, mut rx) = tokio::sync::mpsc::channel::<PipelineEvent>(256);
+    let page = PageId(page_id);
+
+    let runner = engine.run_page(&page, tx);
+    let forwarder = async move {
+        while let Some(ev) = rx.recv().await {
+            let _ = app.emit("pipeline-event", &ev);
+        }
+    };
+    tokio::try_join!(async move { runner.await.map_err(|e| e.to_string()) }, async {
+        forwarder.await;
+        Ok::<(), String>(())
+    })
