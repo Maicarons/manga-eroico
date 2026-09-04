@@ -1,0 +1,15 @@
+[package]
+name = "me-polish"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Optional chapter-context-aware polish node over OpenAI-compatible APIs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+async-trait = "0.1"
