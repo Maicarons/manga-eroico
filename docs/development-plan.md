@@ -58,3 +58,33 @@ manga-eroico = **Rust 性能与体积** + **可视化节点工作流** + **模�
 │  └─ tauri host     命令注册、事件推送、文件系统访问         │
 └────────────────────────────────────────────────────────┘
 ```
+
+### 2.2 技术选型总表
+
+| 层 | 技术 | 版本/说明 |
+|---|---|---|
+| 框架 | Tauri | 2.x（App 打包，不含模型） |
+| 后端语言 | Rust | stable（edition 2021+） |
+| OCR 推理 | `ort` crate | ONNX Runtime 2.0-rc，CUDA / DirectML / CoreML / CPU EP |
+| LLM 推理 | `llama-cpp-2` | Hy-MT2 GGUF 量化版，支持 CUDA/Metal/Vulkan |
+| 润色接入 | `reqwest` + OpenAI 兼容 Chat Completions | 云端 LLM 或本地（LM Studio / Ollama）均可配置 |
+| 文本检测 | comic-text-detector ONNX | 来自 manga-image-translator 发布物 |
+| 抹字修复 | AOT / LaMa-mpe ONNX | 两档可选 |
+| 前端 | React 19 + Vite + TS | strict mode |
+| 画布 | Konva.js（react-konva） | 漫画编辑/排版层 |
+| 工作流 | React Flow（@xyflow/react） | 节点式 pipeline 可视化 |
+| 状态 | Zustand | 轻量、可与 IPC 同步 |
+| 样式 | Tailwind CSS v4 | CSS 变量主题化，暗黑模式一等公民 |
+| UI/UX | 调用 ui-ux-pro-max + frontend-design skill | M1 阶段产出设计系统 |
+| i18n | react-i18next + ICU MessageFormat | zh-CN / en / ja / ko 首发 |
+| 测试 | cargo test / Vitest / Playwright / tauri-driver | 见 §8 |
+| 文档 | VitePress | GH Pages CI 自动发布 |
+| 协议 | **AGPL-3.0** | 根目录 LICENSE + 各 crate 声明 |
+
+---
+
+## 3. 核心翻译管线设计
+
+### 3.1 六段流水线（润色节点可开关）
+
+```
