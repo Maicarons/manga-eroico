@@ -1,0 +1,22 @@
+[package]
+name = "model-manager"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Hardware detection, tier decision and ModelScope model downloads"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+reqwest = { workspace = true }
+futures-util = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+sysinfo = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { workspace = true, features = ["test-util"] }
