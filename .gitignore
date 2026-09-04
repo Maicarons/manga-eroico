@@ -13,6 +13,15 @@ coverage/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
 
+# Tauri generated schemas (rebuilt at build time)
+src-tauri/gen/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# WorkBuddy local workspace memory (private)
+.workbuddy/
+
 # Models & projects (never commit weights or user data)
 /models/
 /**/*.mepro/
