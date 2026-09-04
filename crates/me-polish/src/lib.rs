@@ -222,3 +222,116 @@ impl<T: Transport> Polisher<T> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    fn ctx() -> ChapterContext {
+        let mut glossary = std::collections::BTreeMap::new();
+        glossary.insert("少女".to_string(), "girl".to_string());
+        ChapterContext {
+            chapter_title: "Ch.01".into(),
+            source_lang: "ja".into(),
+            target_lang: "en".into(),
+            glossary,
+            bubbles: vec![
+                Bubble {
+                    id: "b1".into(),
+                    page: 1,
+                    position: 1,
+                    source_text: "こんにちは".into(),
+                    machine_translation: "hello".into(),
+                },
+                Bubble {
+                    id: "b2".into(),
+                    page: 1,
+                    position: 2,
+                    source_text: "またね".into(),
+                    machine_translation: "see you".into(),
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn request_shape_contains_chapter_and_glossary() {
+        let cfg = PolishConfig::default();
+        let body = build_request_body(&ctx(), &cfg);
+        assert_eq!(body["model"], "");
+        assert_eq!(body["messages"][0]["role"], "system");
+        let user = body["messages"][1]["content"].as_str().unwrap();
+        assert!(user.contains("Ch.01"));
+        assert!(user.contains("少女 -> girl"));
+        assert!(user.contains("machine_translation") || user.contains("translation"));
+        assert!(user.contains("see you"));
+    }
+
+    #[test]
+    fn parses_plain_and_fenced_json() {
+        let result = serde_json::json!({
+            "choices": [{ "message": { "content": r#"{"analysis":"ok","items":[{"id":"b1","polished":"Hey there","note":null},{"id":"b2","polished":"See ya!","note":null}]}"# } }]
+        });
+        let parsed = parse_response(&result).unwrap();
+        assert_eq!(parsed.items.len(), 2);
+        assert_eq!(parsed.items[0].polished, "Hey there");
+
+        let fenced = serde_json::json!({
+            "choices": [{ "message": { "content": "```json\n{\"analysis\":\"a\",\"items\":[]}\n```" } }]
+        });
+        assert_eq!(parse_response(&fenced).unwrap().items.len(), 0);
+    }
+
+    #[test]
+    fn parse_missing_content_is_bad_response() {
+        let bad = serde_json::json!({ "choices": [] });
+        assert!(matches!(parse_response(&bad), Err(PolishError::BadResponse(_))));
+    }
+
+    struct FlakyTransport {
+        fails: AtomicU32,
+    }
+
+    #[async_trait::async_trait]
+    impl Transport for FlakyTransport {
+        async fn post_chat(&self, _cfg: &PolishConfig, _body: serde_json::Value) -> Result<serde_json::Value, PolishError> {
+            if self.fails.fetch_add(1, Ordering::SeqCst) < 2 {
+                Err(PolishError::BadResponse("transient".into()))
+            } else {
+                Ok(serde_json::json!({
+                    "choices": [{ "message": { "content": r#"{"analysis":"a","items":[{"id":"b1","polished":"p","note":null}]}"# } }]
+                }))
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn retries_then_succeeds() {
+        let pol = Polisher::with_transport(PolishConfig::default(), FlakyTransport { fails: AtomicU32::new(0) });
+        let res = pol.polish_chapter(&ctx()).await.unwrap();
+        assert_eq!(res.items[0].polished, "p");
+    }
+
+    #[tokio::test]
+    async fn empty_chapter_short_circuits() {
+        let pol = Polisher::with_transport(PolishConfig::default(), FlakyTransport { fails: AtomicU32::new(0) });
+        let mut c = ctx();
+        c.bubbles.clear();
+        let res = pol.polish_chapter(&c).await.unwrap();
+        assert!(res.items.is_empty());
+    }
+
+    #[tokio::test]
+    async fn config_error_does_not_retry() {
+        struct Counting;
+        #[async_trait::async_trait]
+        impl Transport for Counting {
+            async fn post_chat(&self, _c: &PolishConfig, _b: serde_json::Value) -> Result<serde_json::Value, PolishError> {
+                Err(PolishError::Config("no url".into()))
+            }
+        }
+        let pol = Polisher::with_transport(PolishConfig::default(), Counting);
+        let err = pol.polish_chapter(&ctx()).await.unwrap_err();
+        assert!(matches!(err, PolishError::Config(_)));
+    }
+}
