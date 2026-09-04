@@ -148,3 +148,33 @@ MyManga.mepro/
 ### 4.1 系统检测
 
 `model-manager` 启动时探测：GPU 型号/显存（CUDA via `nvml-wrapper`、DirectML、Metal）、系统内存、CPU 核数、磁盘剩余空间，据此生成**硬件档位**。
+
+### 4.2 模型档位矩阵（ModelScope 下载）
+
+| 档位 | 判定条件 | 检测/OCR | 修复 | 翻译 | 下载体积约 |
+|---|---|---|---|---|---|
+| lite | 无独显 或 VRAM < 4GB | PP-OCRv5 mobile | AOT | Hy-MT2-1.8B Q4（或 1.25-bit ~440MB 端侧版） | ~1.5GB |
+| standard | VRAM 4–8GB | PP-OCRv5 server det + mobile rec | LaMa-mpe | Hy-MT2-1.8B Q8 / 7B Q4 | ~4GB |
+| pro | VRAM ≥ 12GB 或 Apple M 系列 ≥ 16GB 统一内存 | PP-OCRv5 server 全套 + v6 rec 可选 | LaMa-mpe | Hy-MT2-7B Q8 / 30B-A3B Q4 | ~10GB+ |
+
+- 语言包独立下载：日/韩/中/英 rec 模型 + 字典各自几 MB~几十 MB，按需拉取。
+- 下载能力：ModelScope HTTP API 直链下载 + **断点续传 + SHA256 校验 + 失败自动重试**，镜像源可切换（HuggingFace 兜底）。
+- 模型存放：Tauri `app_data_dir()/models/`，**打包产物不含任何模型**，首次启动引导进入模型管理器向导（检测硬件 → 推荐档位 → 一键下载 → 进度/校验展示）。
+
+---
+
+## 5. 仓库结构（GitHub / monorepo）
+
+```
+manga-eroico/
+├─ LICENSE                      # AGPL-3.0
+├─ README.md                    # 中英双语 + 截图 + 徽章
+├─ Cargo.toml                   # cargo workspace
+├─ package.json                 # pnpm workspace（前端 + docs）
+├─ crates/
+│  ├─ pipeline-core/            # DAG 引擎、任务调度、事件流
+│  ├─ me-project/               # .mepro 工程读写、章节树、工件版本/回滚
+│  ├─ me-detect/  me-ocr/  me-inpaint/  me-translate/  me-polish/  me-render/
+│  ├─ model-manager/            # ModelScope 下载、系统探测、档位决策
+│  └─ me-server/                # 无头 CLI / HTTP 服务模式（可选）
+├─ src-tauri/                   # Tauri 2 host（命令/事件/打包配置）
