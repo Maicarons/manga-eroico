@@ -1,0 +1,9 @@
+[package]
+name = "me-render"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Typesetting & lettering rules (no model): wrapping, vertical CJK, font fitting"
+
+[dependencies]
+serde = { workspace = true }
