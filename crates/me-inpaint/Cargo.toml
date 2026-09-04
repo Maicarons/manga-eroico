@@ -1,0 +1,13 @@
+[package]
+name = "me-inpaint"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Text removal / inpainting: mask utilities, provider trait, ONNX backend behind a feature"
+
+[dependencies]
+serde = { workspace = true }
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[dev-dependencies]
+serde_json = { workspace = true }
