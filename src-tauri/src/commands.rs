@@ -212,3 +212,111 @@ pub async fn run_pipeline_page(
         forwarder.await;
         Ok::<(), String>(())
     })
+    .map(|(ok, _)| ok)
+}
+
+struct NoopPolish;
+impl Step for NoopPolish {
+    fn kind(&self) -> StepKind {
+        StepKind::Polish
+    }
+    fn run(&self, _: &PageId, _: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Ok(())
+    }
+}
+
+fn ignore_progress(_: u8) {}
+
+/// Mock-backed pipeline steps (real ONNX/llama backends land behind features).
+struct DetectStep;
+impl Step for DetectStep {
+    fn kind(&self) -> StepKind {
+        StepKind::Detect
+    }
+    fn run(&self, _: &PageId, progress: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        progress(50);
+        me_detect::MockDetect.detect(b"mock-png").map(|_| ())
+    }
+}
+
+struct OcrStep;
+impl Step for OcrStep {
+    fn kind(&self) -> StepKind {
+        StepKind::Ocr
+    }
+    fn run(&self, _: &PageId, progress: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        progress(50);
+        me_ocr::MockOcr.recognize(b"mock-png", me_ocr::OcrLang::Ja).map(|_| ())
+    }
+}
+
+struct InpaintStep;
+impl Step for InpaintStep {
+    fn kind(&self) -> StepKind {
+        StepKind::Inpaint
+    }
+    fn run(&self, _: &PageId, progress: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        progress(50);
+        let img = image::DynamicImage::new_rgb8(16, 16);
+        let mask = image::GrayImage::new(16, 16);
+        me_inpaint::MockInpaint
+            .inpaint(&img, &mask, me_inpaint::InpaintModel::Aot)
+            .map(|_| ())
+    }
+}
+
+struct TranslateStep;
+impl Step for TranslateStep {
+    fn kind(&self) -> StepKind {
+        StepKind::Translate
+    }
+    fn run(&self, _: &PageId, progress: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        progress(50);
+        let prompt = me_translate::build_prompt("ja", "zh", &Default::default(), &[]);
+        me_translate::MockTranslate.translate_batch(&prompt).map(|_| ())
+    }
+}
+
+struct RenderStep;
+impl Step for RenderStep {
+    fn kind(&self) -> StepKind {
+        StepKind::Render
+    }
+    fn run(&self, _: &PageId, progress: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        progress(50);
+        let input = me_render::LayoutInput {
+            text: "mock".into(),
+            box_w: 100,
+            box_h: 50,
+            style: Default::default(),
+        };
+        let _ = me_render::MockRender.render_plan(&input);
+        Ok(())
+    }
+}
+
+// keep ignore_progress referenced
+#[allow(dead_code)]
+fn _keep() {
+    ignore_progress(0);
+}
+
+// ---------- polish ----------
+
+/// Dry-run of the polish node against the configured endpoint; used by the
+/// settings page "test connection" button.
+#[tauri::command]
+pub async fn polish_preview(
+    state: State<'_, AppState>,
+    bubbles: Vec<me_polish::Bubble>,
+) -> Result<me_polish::PolishResult, String> {
+    let cfg = state.polish.lock().clone();
+    let ctx = ChapterContext {
+        chapter_title: "preview".into(),
+        source_lang: "ja".into(),
+        target_lang: "zh".into(),
+        glossary: Default::default(),
+        bubbles,
+    };
+    Polisher::new(cfg).polish_chapter(&ctx).await.map_err(|e| e.to_string())
+}
