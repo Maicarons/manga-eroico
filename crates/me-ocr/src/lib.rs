@@ -75,3 +75,81 @@ pub fn sniff_lang(text: &str) -> Option<OcrLang> {
         OcrLang::Ko
     } else if max == kana {
         OcrLang::Ja
+    } else if max == latin && latin > han {
+        OcrLang::En
+    } else {
+        OcrLang::Zh
+    })
+}
+
+/// Provider trait; the `onnx` feature binds this to RapidOCR ONNX sessions.
+pub trait OcrProvider: Send + Sync {
+    fn recognize(&self, image: &[u8], lang: OcrLang) -> anyhow_lite::Result<Vec<OcrLine>>;
+}
+
+pub mod anyhow_lite {
+    pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+}
+
+/// Mock used by tests / web preview.
+pub struct MockOcr;
+
+impl OcrProvider for MockOcr {
+    fn recognize(&self, _image: &[u8], _lang: OcrLang) -> anyhow_lite::Result<Vec<OcrLine>> {
+        Ok(vec![OcrLine { text: "こんにちは".into(), confidence: 0.93 }])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ctc_collapses_repeats_and_blanks() {
+        // charset: 0 blank, then "あ","い","う"
+        let charset = ["あ", "い", "う"];
+        let f = |idx: usize, p: f32| {
+            let mut v = vec![0.0f32; 4];
+            v[idx] = p;
+            v
+        };
+        // frames: あ あ blank い い い blank う
+        let probs = vec![
+            f(1, 0.9), f(1, 0.8), f(0, 0.9), f(2, 0.7), f(2, 0.6), f(2, 0.9), f(0, 0.8), f(3, 0.95),
+        ];
+        let line = ctc_greedy_decode(&probs, 0, &charset);
+        assert_eq!(line.text, "あいう");
+        // confidence = mean over emitted chars: (0.9 + 0.7 + 0.95)/3
+        assert!((line.confidence - (0.9 + 0.7 + 0.95) / 3.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn ctc_blank_between_same_chars_keeps_both() {
+        let charset = ["a", "b"];
+        let f = |idx: usize, p: f32| {
+            let mut v = vec![0.0f32; 3];
+            v[idx] = p;
+            v
+        };
+        // "a blank a" must decode to "aa" — blank separates repeated glyphs
+        let probs = vec![f(1, 0.9), f(0, 0.9), f(1, 0.9)];
+        assert_eq!(ctc_greedy_decode(&probs, 0, &charset).text, "aa");
+    }
+
+    #[test]
+    fn ctc_empty_frames() {
+        let probs = vec![vec![1.0f32, 0.0, 0.0], vec![1.0f32, 0.0, 0.0]];
+        let line = ctc_greedy_decode(&probs, 0, &["x", "y"]);
+        assert_eq!(line.text, "");
+        assert_eq!(line.confidence, 0.0);
+    }
+
+    #[test]
+    fn sniffing() {
+        assert_eq!(sniff_lang("こんにちは世界"), Some(OcrLang::Ja));
+        assert_eq!(sniff_lang("안녕하세요"), Some(OcrLang::Ko));
+        assert_eq!(sniff_lang("你好世界"), Some(OcrLang::Zh));
+        assert_eq!(sniff_lang("Hello, world!"), Some(OcrLang::En));
+        assert_eq!(sniff_lang("...123"), None);
+    }
+}
