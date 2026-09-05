@@ -18,13 +18,19 @@ pub struct OnnxOcr {
 impl OnnxOcr {
     /// `model_path` = PP-OCRv5 rec onnx, `dict_path` = matching ppocrv5 dict.
     pub fn load(model_path: impl AsRef<Path>, dict_path: impl AsRef<Path>) -> Result<Self> {
-        let session = Session::builder()
+        let mut builder = Session::builder()
             .unwrap()
             .with_optimization_level(GraphOptimizationLevel::Level3)
             .unwrap()
             .with_intra_threads(threads())
-            .unwrap()
-            .commit_from_file(model_path)?;
+            .unwrap();
+        #[cfg(feature = "cuda")]
+        let builder = {
+            use ort::execution_providers::CUDAExecutionProvider;
+            eprintln!("[gpu] requesting CUDA execution provider (falls back to CPU)");
+            builder.with_execution_providers([CUDAExecutionProvider::default().build()]).unwrap()
+        };
+        let session = builder.commit_from_file(model_path)?;
         let dict = std::fs::read_to_string(dict_path)?;
         // PaddleOCR CTCLabelEncode layout: ['blank'] + dict + [' ']
         let mut charset: Vec<String> = Vec::with_capacity(dict.lines().count() + 2);

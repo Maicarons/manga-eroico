@@ -19,13 +19,19 @@ pub struct OnnxDetect {
 
 impl OnnxDetect {
     pub fn load(model_path: impl AsRef<Path>) -> Result<Self> {
-        let session = Session::builder()
+        let mut builder = Session::builder()
             .unwrap()
             .with_optimization_level(GraphOptimizationLevel::Level3)
             .unwrap()
             .with_intra_threads(threads())
-            .unwrap()
-            .commit_from_file(model_path)?;
+            .unwrap();
+        #[cfg(feature = "cuda")]
+        let builder = {
+            use ort::execution_providers::CUDAExecutionProvider;
+            eprintln!("[gpu] requesting CUDA execution provider (falls back to CPU)");
+            builder.with_execution_providers([CUDAExecutionProvider::default().build()]).unwrap()
+        };
+        let session = builder.commit_from_file(model_path)?;
         Ok(Self { session: std::sync::Mutex::new(session) })
     }
 }

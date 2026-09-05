@@ -7,6 +7,8 @@ export default defineConfig({
   locales: {
     "/": { label: "简体中文", lang: "zh-CN" },
     "/en/": { label: "English", lang: "en" },
+    "/ja/": { label: "日本語", lang: "ja" },
+    "/ko/": { label: "한국어", lang: "ko" },
   },
   themeConfig: {
     locales: {
@@ -44,6 +46,30 @@ export default defineConfig({
           {
             text: "Guide",
             items: [{ text: "Getting Started", link: "/en/guide/getting-started" }],
+          },
+        ],
+      },
+      "/ja/": {
+        nav: [
+          { text: "ガイド", link: "/ja/guide/getting-started" },
+          { text: "GitHub", link: "https://github.com/Maicarons/manga-eroico" },
+        ],
+        sidebar: [
+          {
+            text: "ガイド",
+            items: [{ text: "Getting Started", link: "/ja/guide/getting-started" }],
+          },
+        ],
+      },
+      "/ko/": {
+        nav: [
+          { text: "가이드", link: "/ko/guide/getting-started" },
+          { text: "GitHub", link: "https://github.com/Maicarons/manga-eroico" },
+        ],
+        sidebar: [
+          {
+            text: "가이드",
+            items: [{ text: "Getting Started", link: "/ko/guide/getting-started" }],
           },
         ],
       },

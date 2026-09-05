@@ -37,6 +37,9 @@ enum Cmd {
     },
     /// Import an image file into the project as a page
     Import { project: PathBuf, image: PathBuf },
+    /// Import every image in a folder, grouping pages into chapters by
+    /// filename prefix (e.g. "ch01_001.png" -> chapter "ch01")
+    ImportFolder { project: PathBuf, folder: PathBuf },
     /// Group pages into a chapter
     Chapter {
         project: PathBuf,
@@ -48,6 +51,8 @@ enum Cmd {
     /// Run the pipeline for one page (or --all pages)
     RunPage {
         project: PathBuf,
+        /// Page id (required unless --all)
+        #[arg(default_value = "")]
         page: String,
         #[arg(long, default_value = "models")]
         models_dir: PathBuf,
@@ -101,18 +106,56 @@ fn run(cmd: Cmd) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
         Cmd::Import { project, image } => {
             let mut p = Project::open(&project)?;
-            let (w, h) = image_dimensions(&image)?;
-            let hash = content_hash(&image)?;
-            let ext = image
-                .extension()
-                .map(|e| e.to_string_lossy().to_string())
-                .unwrap_or_else(|| "png".into());
-            let file_name = format!("{hash}.{ext}");
-            std::fs::copy(&image, p.root().join("pages").join(&file_name))?;
-            let id = p.add_page(&file_name, w, h);
+            let (id, file_name, w, h) = import_image(&mut p, &image)?;
             p.log_operation("import", &serde_json::json!({ "page": id, "file": file_name }))?;
             p.save()?;
             println!("imported page {id} ({file_name}, {w}x{h})");
+        }
+        Cmd::ImportFolder { project, folder } => {
+            let mut p = Project::open(&project)?;
+            let mut images: Vec<PathBuf> = std::fs::read_dir(&folder)?
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .filter(|p| {
+                    matches!(
+                        p.extension().and_then(|e| e.to_str()).map(|e| e.to_ascii_lowercase()),
+                        Some(ref e) if e == "png" || e == "jpg" || e == "jpeg"
+                    )
+                })
+                .collect();
+            images.sort();
+            if images.is_empty() {
+                return Err(format!("no images in {}", folder.display()).into());
+            }
+            // group by filename prefix (chars up to the first '_' or '-')
+            let mut chapter_order: Vec<String> = Vec::new();
+            let mut groups: std::collections::BTreeMap<String, Vec<PathBuf>> = Default::default();
+            for img in &images {
+                let stem = img.file_stem().and_then(|s| s.to_str()).unwrap_or("page").to_string();
+                let prefix: String = stem
+                    .split(['_', '-'])
+                    .next()
+                    .unwrap_or("page")
+                    .to_string();
+                if !groups.contains_key(&prefix) {
+                    chapter_order.push(prefix.clone());
+                }
+                groups.entry(prefix).or_default().push(img.clone());
+            }
+            let mut total = 0;
+            for prefix in &chapter_order {
+                let mut page_ids = Vec::new();
+                for img in &groups[prefix] {
+                    let (id, _name, _w, _h) = import_image(&mut p, img)?;
+                    page_ids.push(id);
+                    total += 1;
+                }
+                let ch = p.add_chapter(prefix, page_ids);
+                println!("chapter {ch}: {prefix} ({} pages)", groups[prefix].len());
+            }
+            p.log_operation("import_folder", &serde_json::json!({ "pages": total, "chapters": chapter_order.len() }))?;
+            p.save()?;
+            println!("imported {total} pages, {} chapters", chapter_order.len());
         }
         Cmd::Chapter { project, title, pages } => {
             let mut p = Project::open(&project)?;
@@ -195,6 +238,9 @@ fn run_pages(
         let page_ids: Vec<String> = if all {
             p.file().pages.iter().map(|pg| pg.id.clone()).collect()
         } else {
+            if page.is_empty() {
+                return Err("provide <PAGE> or --all".into());
+            }
             vec![page]
         };
         let page_count = page_ids.len();
@@ -557,6 +603,19 @@ fn crop_box(img: &image::DynamicImage, x0: f32, y0: f32, x1: f32, y1: f32) -> Re
     let mut buf = std::io::Cursor::new(Vec::new());
     crop.write_to(&mut buf, image::ImageFormat::Png)?;
     Ok(buf.into_inner())
+}
+
+fn import_image(p: &mut Project, image: &Path) -> Result<(String, String, u32, u32), Box<dyn std::error::Error + Send + Sync>> {
+    let (w, h) = image_dimensions(image)?;
+    let hash = content_hash(image)?;
+    let ext = image
+        .extension()
+        .map(|e| e.to_string_lossy().to_string())
+        .unwrap_or_else(|| "png".into());
+    let file_name = format!("{hash}.{ext}");
+    std::fs::copy(image, p.root().join("pages").join(&file_name))?;
+    let id = p.add_page(&file_name, w, h);
+    Ok((id, file_name, w, h))
 }
 
 fn image_dimensions(path: &Path) -> Result<(u32, u32), Box<dyn std::error::Error + Send + Sync>> {

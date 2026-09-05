@@ -35,7 +35,8 @@ describe("App shell", () => {
       expect(screen.getByTestId(`toggle-${step}`)).toBeInTheDocument();
     }
     const polish = screen.getByTestId("toggle-polish");
-    expect(polish.textContent).toContain("⚪"); // disabled glyph
+    expect(polish.textContent).toContain("Polish"); // emoji replaced by svg dot
+    expect(polish.querySelector("svg")).not.toBeNull();
   });
 
   it("runs a mocked pipeline and reaches completed state", async () => {

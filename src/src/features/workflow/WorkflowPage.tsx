@@ -118,15 +118,27 @@ export default function WorkflowPage() {
             {t("workflow.subtitle")}
           </p>
         </div>
-        <button
-          data-testid="run-page"
-          onClick={() => void runPage()}
-          disabled={running}
-          className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
-          style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
-        >
-          {running ? t("workflow.running") : `▶ ${t("workflow.runPage")}`}
-        </button>
+        <div className="flex gap-2">
+          <button
+            data-testid="run-page"
+            onClick={() => void runPage()}
+            disabled={running}
+            className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
+          >
+            {running ? t("workflow.running") : `▶ ${t("workflow.runPage")}`}
+          </button>
+          <button
+            data-testid="run-all"
+            onClick={() => void api.runPipelineAll()}
+            disabled={running || !activeRoot}
+            className="cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50 transition-colors duration-200"
+            style={{ borderColor: "var(--border)" }}
+            title={t("workflow.runAll")}
+          >
+            {t("workflow.runAll")}
+          </button>
+        </div>
       </div>
 
       <div
@@ -153,7 +165,14 @@ export default function WorkflowPage() {
               color: states[step].enabled ? "#fff" : "var(--text-muted)",
             }}
           >
-            {states[step].enabled ? "🟢" : "⚪"} {labels[step]}
+            <svg
+              className="h-3 w-3"
+              viewBox="0 0 12 12"
+              aria-hidden
+            >
+              <circle cx="6" cy="6" r="4" fill={states[step].enabled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+            {labels[step]}
           </button>
         ))}
       </div>
@@ -229,7 +248,7 @@ export default function WorkflowPage() {
               >
                 <div className="min-w-0 flex-1">
                   <span style={{ color: "var(--text-muted)" }}>{item.id}</span>{" "}
-                  <s style={{ opacity: isAdopted ? 0.5 : 1 }}>{item.polished.replace(/^✨ /, "")}</s>{" "}
+                  <s style={{ opacity: isAdopted ? 0.5 : 1 }}>{item.polished.replace(/^[^\w　-鿿]*/, "")}</s>{" "}
                   <span style={{ color: isAdopted ? "var(--ok)" : "var(--accent)", fontWeight: 600 }}>{item.polished}</span>
                 </div>
                 <div className="flex shrink-0 gap-2 text-xs">

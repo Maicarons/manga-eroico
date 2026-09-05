@@ -124,6 +124,17 @@ async function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
     case "set_glossary_term":
     case "set_node_enabled":
       return undefined as T;
+    case "run_pipeline_all":
+      // replay the full pipeline once for a synthetic batch page
+      return (async () => {
+        const steps2 = ["detect", "ocr", "inpaint", "translate", "polish", "render"];
+        for (const step of steps2) {
+          emitPipeline({ page: { 0: "pg_mock_all" }, step, status: "running", progress: null, message: null });
+          await new Promise((r) => setTimeout(r, 60));
+          emitPipeline({ page: { 0: "pg_mock_all" }, step, status: "completed", progress: 100, message: null });
+        }
+        return ["pg_mock_all"] as T;
+      })() as unknown as T;
     case "run_pipeline_page": {
       // emit the same event sequence the Rust host would
       const steps = ["detect", "ocr", "inpaint", "translate", "polish", "render"];
@@ -209,6 +220,7 @@ export const api = {
   setNodeEnabled: (node: string, enabled: boolean) =>
     invoke<void>("set_node_enabled", { node, enabled }),
   runPipelinePage: (pageId: string) => invoke<boolean>("run_pipeline_page", { pageId }),
+  runPipelineAll: () => invoke<string[]>("run_pipeline_all"),
   polishPreview: (
     bubbles: Array<{
       id: string;

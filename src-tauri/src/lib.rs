@@ -37,6 +37,7 @@ pub async fn run() {
             set_glossary_term,
             set_node_enabled,
             run_pipeline_page,
+            run_pipeline_all,
             polish_preview,
         ])
         .run(tauri::generate_context!())

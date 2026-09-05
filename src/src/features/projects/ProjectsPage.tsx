@@ -192,7 +192,9 @@ export default function ProjectsPage() {
                 className="cursor-pointer rounded-lg border px-3 py-1.5 text-xs transition-colors duration-200"
                 style={{ borderColor: "var(--border)" }}
               >
-                ✕
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+                </svg>
               </button>
             </div>
           </div>

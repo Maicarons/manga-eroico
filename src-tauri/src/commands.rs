@@ -52,6 +52,30 @@ pub fn get_llm_for_tier(tier: Tier) -> String {
     Registry::llm_for_tier(tier).to_string()
 }
 
+/// Runs the mock pipeline for every page of the open project (GUI batch),
+/// emitting pipeline-event per step/page just like run_pipeline_page.
+#[tauri::command]
+pub async fn run_pipeline_all(app: AppHandle) -> Result<Vec<String>, String> {
+    use tauri::Manager as _;
+    let path = {
+        let st = app.state::<AppState>();
+        let guard = st.open_project.lock().clone();
+        guard.ok_or("no project open")?
+    };
+    let p = Project::open(&path).map_err(|e| e.to_string())?;
+    let graph = p.file().pipeline.clone();
+    let page_ids: Vec<String> = p.file().pages.iter().map(|pg| pg.id.clone()).collect();
+    drop(p);
+
+    let mut ok_pages = Vec::new();
+    for pid in page_ids {
+        if run_pipeline_page_inner(&app, graph.clone(), &pid).await? {
+            ok_pages.push(pid);
+        }
+    }
+    Ok(ok_pages)
+}
+
 /// Returns the latest translated page for `page_id` as a base64 data URL,
 /// or None when the project has no render artifact yet.
 #[tauri::command]
@@ -255,7 +279,16 @@ pub async fn run_pipeline_page(
     let path = state.open_project.lock().clone().ok_or("no project open")?;
     let project = Project::open(path).map_err(|e| e.to_string())?;
     let graph: PipelineGraph = project.file().pipeline.clone();
+    drop(project);
+    run_pipeline_page_inner(&app, graph, &page_id).await
+}
 
+/// Shared per-page runner used by both single-page and whole-project batch.
+async fn run_pipeline_page_inner(
+    app: &AppHandle,
+    graph: PipelineGraph,
+    page_id: &str,
+) -> Result<bool, String> {
     let steps: Vec<Box<dyn Step>> = vec![
         Box::new(DetectStep),
         Box::new(OcrStep),
@@ -266,7 +299,7 @@ pub async fn run_pipeline_page(
     ];
     let engine = Engine::new(graph, steps);
     let (tx, mut rx) = tokio::sync::mpsc::channel::<PipelineEvent>(256);
-    let page = PageId(page_id);
+    let page = PageId(page_id.to_string());
 
     let runner = engine.run_page(&page, tx);
     let forwarder = async move {

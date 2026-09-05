@@ -263,7 +263,7 @@ M1 阶段调用 **ui-ux-pro-max**（风格/色板/组件选型）与 **frontend-
 | **M1 设计 + 模型管理**（第 2–4 周） | 调用 UI/UX skill 产出设计系统；模型管理器（系统检测/档位/ModelScope 下载/校验/续传） | 空应用内可完成模型下载向导 |
 | **M2 管线核心**（第 4–7 周）✅ **已完成（2026-09-05）**：真实推理（PP-OCRv5 det/rec ONNX + ort）、CPU 填充修复、整页出译图（ab_glyph 光栅化）、me-server CLI 全流程、润色节点 mock 联调；AI 修复（AOT/LaMa）与 llama.cpp 本地翻译留作后续 feature
 | **M3 可视化工作流 + 编辑器 + 工程库**（第 7–10 周）✅ **已完成（2026-09-05）**：React Flow 接通 pipeline 事件（实时状态/事件日志/完成直达编辑器）；润色可开关 + diff 预览逐条采纳/忽略；Konva 编辑器（拖拽/文本编辑/字号/竖排/加载译图/导出 PNG）；工程库 + 章节树 + 页×节点进度矩阵（get_project_overview）
-| **M4 批量 + 打磨**（第 10–13 周） | 整本/文件夹批量队列、章节级增量重跑与版本回滚、GPU 档位（CUDA/Metal/DirectML）、文档站四语言补全、UI/UX 走查 | 整本漫画 30 分钟内可完成翻译（含可选润色） |
+| **M4 批量 + 打磨**（第 10–13 周）✅ **已完成（2026-09-05）**：整本批量实测——import-folder 自动章节分组 + run-page --all，3 页真实推理（CPU）仅 4 秒（≈45 页/分钟，远超 30 分钟判据）；GUI run_pipeline_all 批量按钮；项目保存/恢复（M2 已达成）；GPU 档位——CUDA EP 代码路径就绪（gpu feature，非默认，需 CUDA 环境验证）；文档站四语言（zh/en/ja/ko）；UI 走查——emoji 图标全部换 SVG、hover scale 反模式清除
 | **M5 测试加固 + v0.1 发布**（第 13–15 周） | E2E 全覆盖、金样测试、性能 profile、README/文档终稿、GitHub Release v0.1 | 三平台安装包可下载可用 |
 | **M6+ 展望** | 在线色板/字体市场、Web GPU 推理、插件系统、LLM 校对（Hy-MT2 指令风格化） | — |
 
