@@ -160,6 +160,11 @@
     "testFail": "Connection failed: {{message}}",
     "polishToggle": "Enable polish node in the workflow",
     "about": "About",
-    "version": "Version"
+    "version": "Version",
+    "polishStyle": "Polish style (Hy-MT2 instruction)",
+    "styleNone": "Default (naturalness only)",
+    "styleFormal": "Formal",
+    "styleCasual": "Casual",
+    "styleLiterary": "Literary"
   }
 }

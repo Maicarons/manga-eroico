@@ -160,6 +160,11 @@
     "testFail": "连接失败：{{message}}",
     "polishToggle": "在工作流中启用润色节点",
     "about": "关于",
-    "version": "版本"
+    "version": "版本",
+    "polishStyle": "润色风格（Hy-MT2 指令遵循）",
+    "styleNone": "默认（仅修正自然度）",
+    "styleFormal": "正式 / 书面语",
+    "styleCasual": "口语 / 常体",
+    "styleLiterary": "文学腔"
   }
 }

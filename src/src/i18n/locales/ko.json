@@ -160,6 +160,11 @@
     "testFail": "연결 실패: {{message}}",
     "polishToggle": "워크플로에서 다듬기 노드 활성화",
     "about": "정보",
-    "version": "버전"
+    "version": "버전",
+    "polishStyle": "다듬기 스타일 (Hy-MT2 지시)",
+    "styleNone": "기본",
+    "styleFormal": "격식",
+    "styleCasual": "구어",
+    "styleLiterary": "문학적"
   }
 }

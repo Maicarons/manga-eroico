@@ -20,6 +20,30 @@ pub struct PolishConfig {
     pub temperature: f32,
     #[serde(default = "default_retries")]
     pub max_retries: u32,
+    /// Hy-MT2 instruction-following: rewrite tone, not just fix errors.
+    /// Preset keys: "formal" | "casual" | "literary"; anything else is used
+    /// verbatim as a custom instruction.
+    #[serde(default)]
+    pub style: Option<String>,
+}
+
+/// Style presets -> extra system directive (Hy-MT2 follows complex
+/// instructions, so style control rides on the same polish call).
+pub fn style_directive(style: &Option<String>) -> String {
+    match style.as_deref() {
+        None | Some("") => String::new(),
+        Some("formal") => "
+STYLE: use formal, polite register (书面语/敬体) throughout; expand contractions and prefer complete sentences."
+            .into(),
+        Some("casual") => "
+STYLE: use casual, conversational register (口语/常体) with natural interjections; keep it punchy."
+            .into(),
+        Some("literary") => "
+STYLE: use a literary, novel-like register (文学腔), with vivid but concise phrasing; preserve comic lettering length limits."
+            .into(),
+        Some(custom) => format!("
+STYLE INSTRUCTION (follow exactly): {custom}"),
+    }
 }
 
 fn default_retries() -> u32 {
@@ -34,6 +58,7 @@ impl Default for PolishConfig {
             api_key: None,
             temperature: 0.3,
             max_retries: 2,
+            style: None,
         }
     }
 }
@@ -97,13 +122,13 @@ pub fn build_request_body(ctx: &ChapterContext, cfg: &PolishConfig) -> serde_jso
         })
         .collect::<Vec<_>>();
 
-    let system = "You are a professional comic/manga localization editor. \
+    let system: String = "You are a professional comic/manga localization editor. \
 You will receive machine-translated dialogue bubbles from one chapter, in reading order. \
 First analyse chapter-level consistency (character names, tone, recurring phrases), \
 then polish every bubble's translation for naturalness while preserving meaning, \
 speaker's voice and length constraints of comic lettering. \
 Reply ONLY with a JSON object: {\"analysis\": string, \"items\": [{\"id\": string, \"polished\": string, \"note\": string|null}]} \
-covering EVERY input id.";
+covering EVERY input id.".to_string() + &style_directive(&cfg.style);
 
     let user = serde_json::json!({
         "chapter": ctx.chapter_title,
@@ -333,5 +358,32 @@ mod tests {
         let pol = Polisher::with_transport(PolishConfig::default(), Counting);
         let err = pol.polish_chapter(&ctx()).await.unwrap_err();
         assert!(matches!(err, PolishError::Config(_)));
+    }
+
+    #[test]
+    fn style_directive_injected_into_system_prompt() {
+        let ctx = ChapterContext {
+            chapter_title: "ch1".into(),
+            source_lang: "ja".into(),
+            target_lang: "zh".into(),
+            glossary: Default::default(),
+            bubbles: vec![Bubble {
+                id: "b1".into(),
+                page: 1,
+                position: 1,
+                source_text: "こんにちは".into(),
+                machine_translation: "你好".into(),
+            }],
+        };
+        let mut cfg = PolishConfig::default();
+        cfg.style = Some("literary".into());
+        let body = build_request_body(&ctx, &cfg);
+        let system = body["messages"][0]["content"].as_str().unwrap();
+        assert!(system.contains("literary, novel-like register"), "{system}");
+
+        cfg.style = Some("用东北方言".into());
+        let body = build_request_body(&ctx, &cfg);
+        let system = body["messages"][0]["content"].as_str().unwrap();
+        assert!(system.contains("用东北方言"));
     }
 }

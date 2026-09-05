@@ -26,10 +26,12 @@ impl OnnxDetect {
             .with_intra_threads(threads())
             .unwrap();
         #[cfg(feature = "cuda")]
-        let builder = {
-            use ort::execution_providers::CUDAExecutionProvider;
+        let mut builder = {
+            use ort::ep::CUDA;
             eprintln!("[gpu] requesting CUDA execution provider (falls back to CPU)");
-            builder.with_execution_providers([CUDAExecutionProvider::default().build()]).unwrap()
+            builder
+                .with_execution_providers([CUDA::default().build()])
+                .unwrap()
         };
         let session = builder.commit_from_file(model_path)?;
         Ok(Self { session: std::sync::Mutex::new(session) })

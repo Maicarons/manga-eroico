@@ -160,6 +160,11 @@
     "testFail": "接続失敗：{{message}}",
     "polishToggle": "ワークフローで推敲ノードを有効化",
     "about": "情報",
-    "version": "バージョン"
+    "version": "バージョン",
+    "polishStyle": "推敲スタイル（Hy-MT2 指令）",
+    "styleNone": "デフォルト",
+    "styleFormal": "フォーマル",
+    "styleCasual": "カジュアル",
+    "styleLiterary": "文学的"
   }
 }

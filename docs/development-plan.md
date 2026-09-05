@@ -265,7 +265,7 @@ M1 阶段调用 **ui-ux-pro-max**（风格/色板/组件选型）与 **frontend-
 | **M3 可视化工作流 + 编辑器 + 工程库**（第 7–10 周）✅ **已完成（2026-09-05）**：React Flow 接通 pipeline 事件（实时状态/事件日志/完成直达编辑器）；润色可开关 + diff 预览逐条采纳/忽略；Konva 编辑器（拖拽/文本编辑/字号/竖排/加载译图/导出 PNG）；工程库 + 章节树 + 页×节点进度矩阵（get_project_overview）
 | **M4 批量 + 打磨**（第 10–13 周）✅ **已完成（2026-09-05）**：整本批量实测——import-folder 自动章节分组 + run-page --all，3 页真实推理（CPU）仅 4 秒（≈45 页/分钟，远超 30 分钟判据）；GUI run_pipeline_all 批量按钮；项目保存/恢复（M2 已达成）；GPU 档位——CUDA EP 代码路径就绪（gpu feature，非默认，需 CUDA 环境验证）；文档站四语言（zh/en/ja/ko）；UI 走查——emoji 图标全部换 SVG、hover scale 反模式清除
 | **M5 测试加固 + v0.1 发布**（第 13–15 周）✅ **已完成（2026-09-05）**：E2E 8 用例覆盖五大页面核心流；金样测试（me-render 排版 plan 快照 + write_golden 再生器）；性能 profile（批量计时 ~45 页/分钟 CPU）；README/CHANGELOG 终稿 + Release 徽章；v0.1.0 tag 触发 release.yml 三平台安装包
-| **M6+ 展望** | 在线色板/字体市场、Web GPU 推理、插件系统、LLM 校对（Hy-MT2 指令风格化） | — |
+| **M6+ 展望 → M6 部分落地（2026-09-05）** | ✅ **LLM 校对（Hy-MT2 指令风格化）**：me-polish style 指令（formal/casual/literary/自定义），CLI --polish-style + 设置页风格选择；✅ **GPU 推理实测**：CUDA EP 代码路径 + RTX 4060 实测（EP 注册成功，3 页 7s 含初始化；小模型 CPU 4s 仍占优，大图批量 GPU 收益更大）；⬜ 插件系统 / 在线色板字体市场 / WebGPU 推理留待后续 | — |
 
 > 排期为相对节奏，按 M0→M5 顺序推进，每个里程碑结束做一次回顾并同步 docs。
 

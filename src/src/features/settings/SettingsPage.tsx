@@ -11,6 +11,7 @@ export default function SettingsPage() {
   const [model, setModel] = useState("gpt-4o-mini");
   const [apiKey, setApiKey] = useState("");
   const [polishEnabled, setPolishEnabled] = useState(false);
+  const [polishStyle, setPolishStyle] = useState("");
   const [testResult, setTestResult] = useState<string | null>(null);
 
   const testConnection = async () => {
@@ -88,6 +89,21 @@ export default function SettingsPage() {
             {testResult}
           </p>
         )}
+        <label className="mt-4 block text-xs" style={{ color: "var(--text-muted)" }}>
+          {t("settings.polishStyle")}
+          <select
+            data-testid="polish-style"
+            value={polishStyle}
+            onChange={(e) => setPolishStyle(e.target.value)}
+            className="mt-1 w-full rounded-lg border p-2 text-sm"
+            style={{ borderColor: "var(--border)", background: "var(--surface-2)", color: "var(--text)" }}
+          >
+            <option value="">{t("settings.styleNone")}</option>
+            <option value="formal">{t("settings.styleFormal")}</option>
+            <option value="casual">{t("settings.styleCasual")}</option>
+            <option value="literary">{t("settings.styleLiterary")}</option>
+          </select>
+        </label>
         <label className="mt-4 flex items-center gap-2 text-sm">
           <input
             type="checkbox"

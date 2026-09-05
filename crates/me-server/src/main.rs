@@ -67,6 +67,9 @@ enum Cmd {
         /// OpenAI-compatible endpoint for the polish node (enables it)
         #[arg(long)]
         polish_url: Option<String>,
+        /// Polish style: formal | casual | literary | custom instruction
+        #[arg(long)]
+        polish_style: Option<String>,
         /// TTF/OTF font file for raster output (auto-detected if omitted)
         #[arg(long)]
         font: Option<PathBuf>,
@@ -183,8 +186,8 @@ fn run(cmd: Cmd) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             }
             println!("chapters: {}", f.chapters.len());
         }
-        Cmd::RunPage { project, page, models_dir, llm_url, llm_model, llm_optional, polish_url, font, all } => {
-            run_pages(project, page, models_dir, llm_url, llm_model, llm_optional, polish_url, font, all)?
+        Cmd::RunPage { project, page, models_dir, llm_url, llm_model, llm_optional, polish_url, polish_style, font, all } => {
+            run_pages(project, page, models_dir, llm_url, llm_model, llm_optional, polish_url, polish_style, font, all)?
         }
     }
     Ok(())
@@ -219,6 +222,7 @@ fn run_pages(
     llm_model: String,
     llm_optional: bool,
     polish_url: Option<String>,
+    polish_style: Option<String>,
     font_path: Option<PathBuf>,
     all: bool,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -312,6 +316,7 @@ fn run_pages(
                 api_key: std::env::var("ME_LLM_API_KEY").ok(),
                 temperature: 0.3,
                 max_retries: 2,
+                style: polish_style.clone(),
             }))
         });
         let translator = std::sync::Arc::new(match (&use_llm, &llm_url) {

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Style-directed polish** (Hy-MT2 instruction following): formal / casual /
+  literary presets plus custom instructions, via `--polish-style` and the
+  settings page.
+- **CUDA execution provider** behind the `gpu` feature; validated on an RTX
+  4060 Laptop (EP registration + full batch run; CPU remains faster for small
+  pages due to CUDA init overhead).
+
 ## v0.1.0 (2026-09-05)
 
 First milestone-complete release: M0-M4 of the development plan.
