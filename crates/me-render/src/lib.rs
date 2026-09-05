@@ -1,7 +1,11 @@
 //! me-render: pure typesetting logic that turns (text, bubble box, style)
+
 //! into a glyph layout plan. Font rasterization happens in the frontend
 //! (Konva/canvas); this crate owns the deterministic, unit-testable rules:
 //! line wrapping, CJK handling, vertical layout and font-size fitting.
+
+#[cfg(feature = "draw")]
+pub mod draw;
 
 use serde::{Deserialize, Serialize};
 

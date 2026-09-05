@@ -9,6 +9,7 @@ use me_detect::DetectProvider as _;
 use me_ocr::OcrProvider as _;
 use me_translate::TranslateProvider as _;
 use me_render::me_render_provider::RenderProvider as _;
+use me_polish::Transport as _;
 use me_project::{Lang, Project};
 use pipeline_core::engine::{Engine, PageId, PipelineEvent, Step, StepStatus};
 use pipeline_core::graph::StepKind;
@@ -58,6 +59,12 @@ enum Cmd {
         /// Skip translation if no LLM endpoint is reachable
         #[arg(long, default_value = "true")]
         llm_optional: bool,
+        /// OpenAI-compatible endpoint for the polish node (enables it)
+        #[arg(long)]
+        polish_url: Option<String>,
+        /// TTF/OTF font file for raster output (auto-detected if omitted)
+        #[arg(long)]
+        font: Option<PathBuf>,
         #[arg(long)]
         all: bool,
     },
@@ -133,8 +140,8 @@ fn run(cmd: Cmd) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             }
             println!("chapters: {}", f.chapters.len());
         }
-        Cmd::RunPage { project, page, models_dir, llm_url, llm_model, llm_optional, all } => {
-            run_pages(project, page, models_dir, llm_url, llm_model, llm_optional, all)?
+        Cmd::RunPage { project, page, models_dir, llm_url, llm_model, llm_optional, polish_url, font, all } => {
+            run_pages(project, page, models_dir, llm_url, llm_model, llm_optional, polish_url, font, all)?
         }
     }
     Ok(())
@@ -147,6 +154,7 @@ fn run(cmd: Cmd) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 struct PageState {
     boxes: Vec<me_detect_shim::DetBox>,
     texts: Vec<String>,
+    cleaned: Option<image::RgbImage>,
 }
 
 // tiny struct so the mock build path compiles without me-detect's TextBox
@@ -167,6 +175,8 @@ fn run_pages(
     llm_url: Option<String>,
     llm_model: String,
     llm_optional: bool,
+    polish_url: Option<String>,
+    font_path: Option<PathBuf>,
     all: bool,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     #[cfg(not(feature = "real"))]
@@ -178,7 +188,10 @@ fn run_pages(
     #[cfg(feature = "real")]
     {
         let mut p = Project::open(&project)?;
-        let graph = p.file().pipeline.clone();
+        let mut graph = p.file().pipeline.clone();
+        if polish_url.is_some() {
+            graph.set_enabled(StepKind::Polish, true);
+        }
         let page_ids: Vec<String> = if all {
             p.file().pages.iter().map(|pg| pg.id.clone()).collect()
         } else {
@@ -231,6 +244,30 @@ fn run_pages(
         };
         let det = std::sync::Arc::new(det);
         let ocr = std::sync::Arc::new(ocr);
+
+        // raster font for the render step
+        let font_path = match font_path {
+            Some(f) => Some(f),
+            None => detect_cjk_font(),
+        };
+        let font_bytes: std::sync::Arc<Vec<u8>> = match &font_path {
+            Some(f) => std::sync::Arc::new(std::fs::read(f)?),
+            None => std::sync::Arc::new(Vec::new()),
+        };
+        if font_path.is_none() {
+            eprintln!("[render] no system font found; render step will skip raster output");
+        }
+
+        // optional polish node
+        let polisher = polish_url.map(|url| {
+            std::sync::Arc::new(me_polish::Polisher::new(me_polish::PolishConfig {
+                base_url: url,
+                model: llm_model.clone(),
+                api_key: std::env::var("ME_LLM_API_KEY").ok(),
+                temperature: 0.3,
+                max_retries: 2,
+            }))
+        });
         let translator = std::sync::Arc::new(match (&use_llm, &llm_url) {
             (true, Some(url)) => me_translate::openai::OpenAiCompatTranslate::new(
                 url,
@@ -266,6 +303,8 @@ fn run_pages(
                 project: Arc<Mutex<Project>>,
                 use_llm: bool,
                 translator: std::sync::Arc<me_translate::openai::OpenAiCompatTranslate>,
+                font_bytes: std::sync::Arc<Vec<u8>>,
+                polisher: Option<std::sync::Arc<me_polish::Polisher<me_polish::HttpTransport>>>,
             }
             impl Ctx {
                 fn put(&self, node: &str, page: &str, bytes: &[u8]) {
@@ -282,6 +321,8 @@ fn run_pages(
                 project: project_arc.clone(),
                 use_llm,
                 translator: translator.clone(),
+                font_bytes: font_bytes.clone(),
+                polisher: polisher.clone(),
             });
 
             struct DetectStep2(Arc<Ctx>);
@@ -328,11 +369,18 @@ fn run_pages(
             impl Step for InpaintStep2 {
                 fn kind(&self) -> StepKind { StepKind::Inpaint }
                 fn run(&self, page: &PageId, progress: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-                    // real inpainting (AOT/LaMa) is behind its own model download;
-                    // for now record the masks so the editor can redraw text areas
-                    progress(50);
+                    progress(30);
                     let boxes = self.0.state.lock().unwrap().boxes.clone();
-                    let bytes = serde_json::to_vec(&boxes)?;
+                    // CPU inpaint: fill each detected text region with the
+                    // surrounding background color (flat bubble backgrounds).
+                    // AI inpainting (AOT/LaMa) remains behind future features.
+                    let mut img = image::load_from_memory(&self.0.png)?.to_rgb8();
+                    let rects: Vec<(f32, f32, f32, f32)> = boxes.iter()
+                        .map(|b| (b.x0, b.y0, b.x1, b.y1)).collect();
+                    me_render::draw::fill_regions(&mut img, &rects, 3);
+                    progress(70);
+                    self.0.state.lock().unwrap().cleaned = Some(img);
+                    let bytes = serde_json::to_vec(&rects)?;
                     self.0.put("inpaint", &page.0, &bytes);
                     Ok(())
                 }
@@ -376,29 +424,86 @@ fn run_pages(
             impl Step for RenderStep2 {
                 fn kind(&self) -> StepKind { StepKind::Render }
                 fn run(&self, page: &PageId, progress: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-                    progress(40);
-                    let texts = self.0.state.lock().unwrap().texts.clone();
-                    let boxes = self.0.state.lock().unwrap().boxes.clone();
+                    progress(30);
+                    let (texts, boxes, cleaned) = {
+                        let st = self.0.state.lock().unwrap();
+                        (st.texts.clone(), st.boxes.clone(), st.cleaned.clone())
+                    };
+                    let mut img = cleaned.unwrap_or_else(|| image::load_from_memory(&self.0.png).unwrap().to_rgb8());
                     let mut plans = Vec::new();
+                    if !self.0.font_bytes.is_empty() {
+                        let items: Vec<me_render::draw::DrawItem<'_>> = texts.iter().zip(boxes.iter())
+                            .map(|(t, b)| me_render::draw::DrawItem {
+                                x: b.x0, y: b.y0, w: (b.x1 - b.x0).max(10.0), h: (b.y1 - b.y0).max(10.0),
+                                text: t,
+                            })
+                            .collect();
+                        img = me_render::draw::render_translated_page(img, &items, &self.0.font_bytes, [17, 17, 20])?;
+                    }
+                    progress(60);
+                    // keep the layout plan for the editor (Konva re-typesetting)
                     for (t, b) in texts.iter().zip(boxes.iter()) {
-                        let input = me_render::LayoutInput {
+                        plans.push(me_render::LayoutInput {
                             text: t.clone(),
                             box_w: (b.x1 - b.x0).max(10.0) as u32,
                             box_h: (b.y1 - b.y0).max(10.0) as u32,
                             style: Default::default(),
-                        };
-                        plans.push(me_render::MockRender.render_plan(&input));
+                        });
                     }
                     let bytes = serde_json::to_vec(&plans)?;
                     self.0.put("render", &page.0, &bytes);
+                    // the translated page itself
+                    let mut png = std::io::Cursor::new(Vec::new());
+                    image::DynamicImage::ImageRgb8(img)
+                        .write_to(&mut png, image::ImageFormat::Png)?;
+                    let pid = &page.0;
+                    let dir = self.0.project.lock().unwrap().root().join("artifacts").join("render").join(pid);
+                    std::fs::create_dir_all(&dir)?;
+                    let n = std::fs::read_dir(&dir)?.filter_map(|e| e.ok())
+                        .filter(|e| e.path().extension().map(|x| x == "png").unwrap_or(false)).count();
+                    std::fs::write(dir.join(format!("translated_v{n:04}.png")), png.into_inner())?;
+                    progress(100);
                     Ok(())
                 }
             }
 
-            struct NoopPolish2;
-            impl Step for NoopPolish2 {
+            struct PolishStep2(Arc<Ctx>);
+            impl Step for PolishStep2 {
                 fn kind(&self) -> StepKind { StepKind::Polish }
-                fn run(&self, _: &PageId, _: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> { Ok(()) }
+                fn run(&self, page: &PageId, progress: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+                    let Some(polisher) = &self.0.polisher else { return Ok(()) };
+                    progress(30);
+                    let texts = self.0.state.lock().unwrap().texts.clone();
+                    let ctx = me_polish::ChapterContext {
+                        chapter_title: "page".into(),
+                        source_lang: "ja".into(),
+                        target_lang: "zh".into(),
+                        glossary: Default::default(),
+                        bubbles: texts.iter().enumerate()
+                            .map(|(i, t)| me_polish::Bubble {
+                                id: format!("b{i:03}"),
+                                page: 1,
+                                position: (i + 1) as u32,
+                                source_text: String::new(), // OCR source not carried here
+                                machine_translation: t.clone(),
+                            })
+                            .collect(),
+                    };
+                    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
+                    let result = rt.block_on(polisher.polish_chapter(&ctx))?;
+                    progress(70);
+                    let mut updated = texts.clone();
+                    for item in &result.items {
+                        if let Ok(idx) = item.id.trim_start_matches('b').parse::<usize>() {
+                            if idx < updated.len() {
+                                updated[idx] = item.polished.clone();
+                            }
+                        }
+                    }
+                    self.0.state.lock().unwrap().texts = updated;
+                    let _ = page;
+                    Ok(())
+                }
             }
 
             let steps: Vec<Box<dyn Step>> = vec![
@@ -406,7 +511,7 @@ fn run_pages(
                 Box::new(OcrStep2(ctx.clone())),
                 Box::new(InpaintStep2(ctx.clone())),
                 Box::new(TranslateStep2(ctx.clone())),
-                Box::new(NoopPolish2),
+                Box::new(PolishStep2(ctx.clone())),
                 Box::new(RenderStep2(ctx)),
             ];
 
@@ -470,3 +575,17 @@ fn anyhow_bail(msg: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>
     Err(msg.into())
 }
 
+
+
+/// Best-effort system CJK font detection across platforms.
+fn detect_cjk_font() -> Option<PathBuf> {
+    let candidates: &[&str] = &[
+        "C:\\Windows\\Fonts\\msyh.ttc",
+        "C:\\Windows\\Fonts\\msyh.ttf",
+        "C:\\Windows\\Fonts\\simhei.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/System/Library/Fonts/Hiragino Sans GB.ttc",
+        "/System/Library/Fonts/PingFang.ttc",
+    ];
+    candidates.iter().map(PathBuf::from).find(|p| p.exists())
+}

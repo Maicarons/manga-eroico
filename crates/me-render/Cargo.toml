@@ -6,4 +6,11 @@ license.workspace = true
 description = "Typesetting & lettering rules (no model): wrapping, vertical CJK, font fitting"
 
 [dependencies]
+ab_glyph = { version = "0.2.32", optional = true }
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"], optional = true }
+imageproc = { version = "0.27.0", optional = true }
 serde = { workspace = true }
+
+[features]
+draw = ["dep:ab_glyph", "dep:image", "dep:imageproc"]
+imageproc = ["dep:imageproc"]
