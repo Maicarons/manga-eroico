@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Multilingual translation pipeline**: 38 target languages (Hy-MT2 full
+  table, any-pair translation) and 14 OCR recognizer script families
+  (PP-OCRv5/v4/v3: latin, cyrillic, arabic, devanagari, thai, tamil, telugu,
+  greek, ...). Source/target pickers are grouped dropdowns; prompts use full
+  language names as Hy-MT2 requires.
 - **Style-directed polish** (Hy-MT2 instruction following): formal / casual /
   literary presets plus custom instructions, via `--polish-style` and the
   settings page.

@@ -36,13 +36,131 @@ pub enum ProjectError {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum Lang {
     Zh,
+    #[serde(rename = "zh-Hant")]
+    ZhHant,
+    Yue,
     En,
     Ja,
     Ko,
+    Fr,
+    Pt,
+    Es,
+    It,
+    De,
+    Nl,
+    Pl,
+    Cs,
+    Ru,
+    Uk,
+    Ar,
+    He,
+    Fa,
+    Tr,
+    Th,
+    Vi,
+    Id,
+    Ms,
+    Tl,
+    Hi,
+    Bn,
+    Ta,
+    Te,
+    Mr,
+    Gu,
+    Ur,
+    Km,
+    My,
+    Bo,
+    Kk,
+    Mn,
+    Ug,
+    /// Anything outside the Hy-MT2 language table (free ISO code).
     Other(String),
+}
+
+impl Lang {
+    /// ISO-ish code used in project files and the UI.
+    pub fn code(&self) -> &str {
+        match self {
+            Lang::Zh => "zh",
+            Lang::ZhHant => "zh-Hant",
+            Lang::Yue => "yue",
+            Lang::En => "en",
+            Lang::Ja => "ja",
+            Lang::Ko => "ko",
+            Lang::Fr => "fr",
+            Lang::Pt => "pt",
+            Lang::Es => "es",
+            Lang::It => "it",
+            Lang::De => "de",
+            Lang::Nl => "nl",
+            Lang::Pl => "pl",
+            Lang::Cs => "cs",
+            Lang::Ru => "ru",
+            Lang::Uk => "uk",
+            Lang::Ar => "ar",
+            Lang::He => "he",
+            Lang::Fa => "fa",
+            Lang::Tr => "tr",
+            Lang::Th => "th",
+            Lang::Vi => "vi",
+            Lang::Id => "id",
+            Lang::Ms => "ms",
+            Lang::Tl => "tl",
+            Lang::Hi => "hi",
+            Lang::Bn => "bn",
+            Lang::Ta => "ta",
+            Lang::Te => "te",
+            Lang::Mr => "mr",
+            Lang::Gu => "gu",
+            Lang::Ur => "ur",
+            Lang::Km => "km",
+            Lang::My => "my",
+            Lang::Bo => "bo",
+            Lang::Kk => "kk",
+            Lang::Mn => "mn",
+            Lang::Ug => "ug",
+            Lang::Other(c) => c,
+        }
+    }
+
+    /// Parses an ISO-ish code; unknown codes become `Lang::Other`.
+    pub fn from_code(code: &str) -> Self {
+        let known = [
+            ("zh", Lang::Zh), ("zh-hant", Lang::ZhHant), ("zh-tw", Lang::ZhHant),
+            ("zh-hk", Lang::ZhHant), ("yue", Lang::Yue), ("en", Lang::En),
+            ("ja", Lang::Ja), ("ko", Lang::Ko), ("fr", Lang::Fr), ("pt", Lang::Pt),
+            ("es", Lang::Es), ("it", Lang::It), ("de", Lang::De), ("nl", Lang::Nl),
+            ("pl", Lang::Pl), ("cs", Lang::Cs), ("ru", Lang::Ru), ("uk", Lang::Uk),
+            ("ar", Lang::Ar), ("he", Lang::He), ("fa", Lang::Fa), ("tr", Lang::Tr),
+            ("th", Lang::Th), ("vi", Lang::Vi), ("id", Lang::Id), ("ms", Lang::Ms),
+            ("tl", Lang::Tl), ("fil", Lang::Tl), ("hi", Lang::Hi), ("bn", Lang::Bn),
+            ("ta", Lang::Ta), ("te", Lang::Te), ("mr", Lang::Mr), ("gu", Lang::Gu),
+            ("ur", Lang::Ur), ("km", Lang::Km), ("my", Lang::My), ("bo", Lang::Bo),
+            ("kk", Lang::Kk), ("mn", Lang::Mn), ("ug", Lang::Ug),
+        ];
+        let lower = code.trim().to_ascii_lowercase();
+        known
+            .iter()
+            .find(|(c, _)| *c == lower)
+            .map(|(_, l)| l.clone())
+            .unwrap_or_else(|| Lang::Other(code.trim().to_string()))
+    }
+
+    /// Every Hy-MT2-supported language (translation capability).
+    pub fn all_supported() -> &'static [Lang] {
+        &[
+            Lang::Zh, Lang::ZhHant, Lang::Yue, Lang::En, Lang::Ja, Lang::Ko,
+            Lang::Fr, Lang::Pt, Lang::Es, Lang::It, Lang::De, Lang::Nl,
+            Lang::Pl, Lang::Cs, Lang::Ru, Lang::Uk, Lang::Ar, Lang::He,
+            Lang::Fa, Lang::Tr, Lang::Th, Lang::Vi, Lang::Id, Lang::Ms,
+            Lang::Tl, Lang::Hi, Lang::Bn, Lang::Ta, Lang::Te, Lang::Mr,
+            Lang::Gu, Lang::Ur, Lang::Km, Lang::My, Lang::Bo, Lang::Kk,
+            Lang::Mn, Lang::Ug,
+        ]
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

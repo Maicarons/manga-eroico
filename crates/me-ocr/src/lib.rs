@@ -8,10 +8,81 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OcrLang {
-    Zh,
+    /// PP-OCRv5 `ch` recognizer: mixed simplified-Chinese/English/Japanese/Korean.
+    Mixed,
     En,
-    Ja,
     Ko,
+    /// PP-OCRv4 `japan` recognizer (Japanese-only, alternative to Mixed).
+    Japan,
+    /// PP-OCRv3 `chinese_cht` recognizer (Traditional Chinese).
+    ChineseCht,
+    /// Latin-script languages (fr/de/es/pt/it/nl/pl/cs/...).
+    Latin,
+    /// Cyrillic-script languages (ru/uk/...).
+    Cyrillic,
+    Arabic,
+    Devanagari,
+    /// Greek (OCR-only; Hy-MT2 has no Greek target).
+    El,
+    /// Spanish+Slavic composite recognizer (PP-OCRv5).
+    Eslav,
+    Ta,
+    Te,
+    Th,
+    /// Kannada (PP-OCRv4 `ka`; OCR-only).
+    Ka,
+}
+
+impl OcrLang {
+    /// Model registry spec id for this script family's recognizer.
+    pub fn rec_spec_id(&self) -> &'static str {
+        match self {
+            OcrLang::Mixed => "rec_mixed",
+            OcrLang::En => "rec_en",
+            OcrLang::Ko => "rec_ko",
+            OcrLang::Japan => "rec_japan",
+            OcrLang::ChineseCht => "rec_cht",
+            OcrLang::Latin => "rec_latin",
+            OcrLang::Cyrillic => "rec_cyrillic",
+            OcrLang::Arabic => "rec_arabic",
+            OcrLang::Devanagari => "rec_devanagari",
+            OcrLang::El => "rec_el",
+            OcrLang::Eslav => "rec_eslav",
+            OcrLang::Ta => "rec_ta",
+            OcrLang::Te => "rec_te",
+            OcrLang::Th => "rec_th",
+            OcrLang::Ka => "rec_ka",
+        }
+    }
+}
+
+impl OcrLang {
+    /// Picks the recognizer script family for a project source language
+    /// (ISO-ish code). Languages without a dedicated PP-OCR recognizer fall
+    /// back to the mixed zh/en/ja/ko model or their closest script family.
+    pub fn for_source(code: &str) -> OcrLang {
+        match code.trim().to_ascii_lowercase().as_str() {
+            "zh" => OcrLang::Mixed,
+            "zh-hant" | "zh-tw" | "zh-hk" => OcrLang::ChineseCht,
+            "yue" => OcrLang::Mixed,
+            "ja" => OcrLang::Japan,
+            "ko" => OcrLang::Ko,
+            "en" => OcrLang::En,
+            "fr" | "de" | "es" | "pt" | "it" | "nl" | "pl" | "cs" | "vi" | "tr" | "id"
+            | "ms" | "tl" => OcrLang::Latin,
+            "ru" | "uk" | "kk" | "mn" | "ug" => OcrLang::Cyrillic,
+            "ar" => OcrLang::Arabic,
+            "fa" | "ur" | "he" => OcrLang::Arabic,
+            "hi" | "mr" | "gu" | "bn" => OcrLang::Devanagari,
+            "ta" => OcrLang::Ta,
+            "te" => OcrLang::Te,
+            "th" => OcrLang::Th,
+            "el" => OcrLang::El,
+            // no dedicated PP-OCR recognizer (km/my/bo and unknown codes):
+            // mixed model is the best-effort fallback
+            _ => OcrLang::Mixed,
+        }
+    }
 }
 
 /// One recognized line inside a detected box.
@@ -74,11 +145,11 @@ pub fn sniff_lang(text: &str) -> Option<OcrLang> {
     Some(if max == hangul {
         OcrLang::Ko
     } else if max == kana {
-        OcrLang::Ja
+        OcrLang::Japan
     } else if max == latin && latin > han {
         OcrLang::En
     } else {
-        OcrLang::Zh
+        OcrLang::Mixed
     })
 }
 
@@ -149,9 +220,9 @@ mod tests {
 
     #[test]
     fn sniffing() {
-        assert_eq!(sniff_lang("こんにちは世界"), Some(OcrLang::Ja));
+        assert_eq!(sniff_lang("こんにちは世界"), Some(OcrLang::Japan));
         assert_eq!(sniff_lang("안녕하세요"), Some(OcrLang::Ko));
-        assert_eq!(sniff_lang("你好世界"), Some(OcrLang::Zh));
+        assert_eq!(sniff_lang("你好世界"), Some(OcrLang::Mixed));
         assert_eq!(sniff_lang("Hello, world!"), Some(OcrLang::En));
         assert_eq!(sniff_lang("...123"), None);
     }

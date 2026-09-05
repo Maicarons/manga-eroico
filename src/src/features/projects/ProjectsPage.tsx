@@ -13,12 +13,95 @@ interface Overview {
   }>;
 }
 
-const LANGS = [
-  { code: "ja", label: "日本語" },
-  { code: "en", label: "English" },
-  { code: "zh", label: "简体中文" },
-  { code: "ko", label: "한국어" },
+// Source languages: limited by what PP-OCR recognizers can read (script
+// families mapped in me-ocr OcrLang::for_source). Languages without a
+// dedicated recognizer (km/my/bo) fall back to the mixed model in-engine.
+const SOURCE_LANGS = [
+  { group: "CJK", items: [
+    { code: "ja", label: "日本語" },
+    { code: "zh", label: "简体中文" },
+    { code: "zh-Hant", label: "繁體中文" },
+    { code: "yue", label: "粵語" },
+    { code: "ko", label: "한국어" },
+    { code: "en", label: "English" },
+  ]},
+  { group: "Latin / Cyrillic", items: [
+    { code: "fr", label: "Français" }, { code: "de", label: "Deutsch" },
+    { code: "es", label: "Español" }, { code: "pt", label: "Português" },
+    { code: "it", label: "Italiano" }, { code: "nl", label: "Nederlands" },
+    { code: "pl", label: "Polski" }, { code: "cs", label: "Čeština" },
+    { code: "vi", label: "Tiếng Việt" }, { code: "tr", label: "Türkçe" },
+    { code: "id", label: "Bahasa Indonesia" }, { code: "ms", label: "Bahasa Melayu" },
+    { code: "tl", label: "Filipino" },
+    { code: "ru", label: "Русский" }, { code: "uk", label: "Українська" },
+    { code: "kk", label: "Қазақша" }, { code: "mn", label: "Монгол" }, { code: "ug", label: "ئۇيغۇرچە" },
+  ]},
+  { group: "Other scripts", items: [
+    { code: "ar", label: "العربية" }, { code: "fa", label: "فارسی" }, { code: "ur", label: "اردو" }, { code: "he", label: "עברית" },
+    { code: "hi", label: "हिन्दी" }, { code: "mr", label: "मराठी" }, { code: "gu", label: "ગુજરાતી" }, { code: "bn", label: "বাংলা" },
+    { code: "ta", label: "தமிழ்" }, { code: "te", label: "తెలుగు" }, { code: "th", label: "ไทย" },
+  ]},
 ] as const;
+
+// Target languages: Hy-MT2 translates any pair of these 38 languages.
+const TARGET_LANGS = [
+  { group: "中文系", items: [
+    { code: "zh", label: "简体中文" }, { code: "zh-Hant", label: "繁體中文" }, { code: "yue", label: "粵語" },
+  ]},
+  { group: "亚洲语言", items: [
+    { code: "ja", label: "日本語" }, { code: "ko", label: "한국어" }, { code: "th", label: "ไทย" },
+    { code: "vi", label: "Tiếng Việt" }, { code: "id", label: "Indonesia" }, { code: "ms", label: "Melayu" },
+    { code: "tl", label: "Filipino" }, { code: "km", label: "ខ្មែរ" }, { code: "my", label: "မြန်မာ" },
+  ]},
+  { group: "欧洲语言", items: [
+    { code: "en", label: "English" }, { code: "fr", label: "Français" }, { code: "de", label: "Deutsch" },
+    { code: "es", label: "Español" }, { code: "pt", label: "Português" }, { code: "it", label: "Italiano" },
+    { code: "nl", label: "Nederlands" }, { code: "pl", label: "Polski" }, { code: "cs", label: "Čeština" },
+    { code: "ru", label: "Русский" }, { code: "uk", label: "Українська" },
+  ]},
+  { group: "中东 & 南亚", items: [
+    { code: "ar", label: "العربية" }, { code: "he", label: "עברית" }, { code: "fa", label: "فارسی" },
+    { code: "tr", label: "Türkçe" }, { code: "hi", label: "हिन्दी" }, { code: "bn", label: "বাংলা" },
+    { code: "ta", label: "தமிழ்" }, { code: "te", label: "తెలుగు" }, { code: "mr", label: "मराठी" },
+    { code: "gu", label: "ગુજરાતી" }, { code: "ur", label: "اردو" },
+  ]},
+  { group: "民族语言", items: [
+    { code: "bo", label: "བོད་སྐད་" }, { code: "kk", label: "Қазақша" },
+    { code: "mn", label: "Монгол" }, { code: "ug", label: "ئۇيغۇرچە" },
+  ]},
+] as const;
+
+function LangSelect({
+  value,
+  onChange,
+  groups,
+  testid,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  groups: ReadonlyArray<{ group: string; items: ReadonlyArray<{ code: string; label: string }> }>;
+  testid: string;
+}) {
+  return (
+    <select
+      data-testid={testid}
+      className="ml-1 rounded border bg-transparent px-2 py-1"
+      style={{ borderColor: "var(--border)", color: "var(--text)" }}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {groups.map((g) => (
+        <optgroup key={g.group} label={g.group}>
+          {g.items.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.label}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
+}
 
 export default function ProjectsPage() {
   const { t } = useTranslation();
@@ -85,33 +168,11 @@ export default function ProjectsPage() {
           <div className="mb-3 flex gap-4">
             <label className="text-sm">
               {t("projects.sourceLang")}{" "}
-              <select
-                className="ml-1 rounded border bg-transparent px-2 py-1"
-                style={{ borderColor: "var(--border)", color: "var(--text)" }}
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-              >
-                {LANGS.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
+              <LangSelect value={source} onChange={setSource} groups={SOURCE_LANGS} testid="source-lang" />
             </label>
             <label className="text-sm">
               {t("projects.targetLang")}{" "}
-              <select
-                className="ml-1 rounded border bg-transparent px-2 py-1"
-                style={{ borderColor: "var(--border)", color: "var(--text)" }}
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-              >
-                {LANGS.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
+              <LangSelect value={target} onChange={setTarget} groups={TARGET_LANGS} testid="target-lang" />
             </label>
           </div>
           <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>

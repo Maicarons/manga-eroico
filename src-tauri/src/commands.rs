@@ -345,7 +345,7 @@ impl Step for OcrStep {
     }
     fn run(&self, _: &PageId, progress: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         progress(50);
-        me_ocr::MockOcr.recognize(b"mock-png", me_ocr::OcrLang::Ja).map(|_| ())
+        me_ocr::MockOcr.recognize(b"mock-png", me_ocr::OcrLang::Mixed).map(|_| ())
     }
 }
 

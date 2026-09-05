@@ -81,13 +81,7 @@ enum Cmd {
 }
 
 fn parse_lang(s: &str) -> Lang {
-    match s.to_ascii_lowercase().as_str() {
-        "zh" | "zh-cn" => Lang::Zh,
-        "en" => Lang::En,
-        "ja" => Lang::Ja,
-        "ko" => Lang::Ko,
-        other => Lang::Other(other.to_string()),
-    }
+    Lang::from_code(s)
 }
 
 fn main() {
@@ -353,6 +347,9 @@ fn run_pages(
                 state: Arc<Mutex<PageState>>,
                 project: Arc<Mutex<Project>>,
                 use_llm: bool,
+                source_lang: String,
+                target_lang: String,
+                glossary: std::collections::BTreeMap<String, String>,
                 translator: std::sync::Arc<me_translate::openai::OpenAiCompatTranslate>,
                 font_bytes: std::sync::Arc<Vec<u8>>,
                 polisher: Option<std::sync::Arc<me_polish::Polisher<me_polish::HttpTransport>>>,
@@ -363,7 +360,11 @@ fn run_pages(
                 }
             }
 
-            let project_arc = Arc::new(Mutex::new(Project::open(&project)?));
+            let project_inner = Project::open(&project)?;
+            let source_lang = project_inner.file().source_lang.code().to_string();
+            let target_lang = project_inner.file().target_lang.code().to_string();
+            let glossary = project_inner.file().glossary.clone();
+            let project_arc = Arc::new(Mutex::new(project_inner));
             let ctx = Arc::new(Ctx {
                 png,
                 det: det.clone(),
@@ -371,6 +372,9 @@ fn run_pages(
                 state: state.clone(),
                 project: project_arc.clone(),
                 use_llm,
+                source_lang,
+                target_lang,
+                glossary,
                 translator: translator.clone(),
                 font_bytes: font_bytes.clone(),
                 polisher: polisher.clone(),
@@ -405,7 +409,10 @@ fn run_pages(
                     let total = boxes.len().max(1);
                     for (i, b) in boxes.iter().enumerate() {
                         let crop = crop_box(&img, b.x0, b.y0, b.x1, b.y1)?;
-                        let lines = self.0.ocr.recognize(&crop, me_ocr::OcrLang::Ja)?;
+                        let lines = self
+                        .0
+                        .ocr
+                        .recognize(&crop, me_ocr::OcrLang::for_source(&self.0.source_lang))?;
                         texts.push(lines.into_iter().map(|l| l.text).collect::<Vec<_>>().join(""));
                         progress((i as u8 + 1) * 100 / total as u8);
                     }
@@ -442,11 +449,21 @@ fn run_pages(
                 fn kind(&self) -> StepKind { StepKind::Translate }
                 fn run(&self, page: &PageId, progress: &(dyn Fn(u8) + Send + Sync)) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                     let texts = self.0.state.lock().unwrap().texts.clone();
-                    let prompt = me_translate::build_prompt("ja", "zh", &Default::default(), &[]);
-                    let numbered: String = texts.iter().enumerate()
-                        .map(|(i, t)| format!("[{}]{}\n", i + 1, t))
+                    let items: Vec<me_translate::TranslateItem> = texts
+                        .iter()
+                        .enumerate()
+                        .map(|(i, t)| me_translate::TranslateItem {
+                            id: format!("{}", i + 1),
+                            source_text: t.clone(),
+                        })
                         .collect();
-                    let full = format!("{prompt}\n{numbered}");
+                    let prompt = me_translate::build_prompt(
+                        &self.0.source_lang,
+                        &self.0.target_lang,
+                        &self.0.glossary,
+                        &items,
+                    );
+                    let full = prompt;
                     let out = if self.0.use_llm {
                         let mut translated = String::new();
                         for line in full.lines() {

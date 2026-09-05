@@ -23,6 +23,30 @@ pub struct TranslateItem {
     pub source_text: String,
 }
 
+/// Full language names for Hy-MT2 prompts: the model's docs require the
+/// complete name ("英语"), not the ISO code ("en"). Chinese names are used
+/// because the canonical prompt template is Chinese.
+pub fn lang_full_name(code: &str) -> String {
+    const NAMES: &[(&str, &str)] = &[
+        ("zh", "中文（简体）"), ("zh-cn", "中文（简体）"), ("zh-hant", "中文（繁体）"),
+        ("zh-tw", "中文（繁体）"), ("zh-hk", "中文（繁体）"), ("yue", "粤语"),
+        ("en", "英语"), ("ja", "日语"), ("ko", "韩语"), ("fr", "法语"),
+        ("pt", "葡萄牙语"), ("es", "西班牙语"), ("it", "意大利语"), ("de", "德语"),
+        ("nl", "荷兰语"), ("pl", "波兰语"), ("cs", "捷克语"), ("ru", "俄语"),
+        ("uk", "乌克兰语"), ("ar", "阿拉伯语"), ("he", "希伯来语"), ("fa", "波斯语"),
+        ("tr", "土耳其语"), ("th", "泰语"), ("vi", "越南语"), ("id", "印尼语"),
+        ("ms", "马来语"), ("tl", "菲律宾语"), ("fil", "菲律宾语"), ("hi", "印地语"),
+        ("bn", "孟加拉语"), ("ta", "泰米尔语"), ("te", "泰卢固语"), ("mr", "马拉地语"),
+        ("gu", "古吉拉特语"), ("ur", "乌尔都语"), ("km", "高棉语"), ("my", "缅甸语"),
+        ("bo", "藏语"), ("kk", "哈萨克语"), ("mn", "蒙古语"), ("ug", "维吾尔语"),
+    ];
+    let lower = code.trim().to_ascii_lowercase();
+    match NAMES.iter().find(|(c, _)| *c == lower) {
+        Some((_, name)) => (*name).to_string(),
+        None => code.to_string(),
+    }
+}
+
 /// Builds the Hy-MT2 prompt for a batch of bubbles in reading order.
 /// Hy-MT2 honors term/style instructions, so the glossary is embedded inline.
 pub fn build_prompt(
@@ -46,10 +70,11 @@ pub fn build_prompt(
         .map(|i| format!("[{}] {}", i.id, i.source_text))
         .collect::<Vec<_>>()
         .join("\n");
+    let src = lang_full_name(source_lang);
+    let tgt = lang_full_name(target_lang);
     format!(
-        "Translate the following comic dialogue from {source_lang} to {target_lang}. \
-Keep each line's meaning, tone and emotional register; output length should suit comic lettering. \
-{glossary_block}Output format: one line per input, as \"[id] translation\", no extra commentary.\n\n{lines}"
+        "将以下漫画对白从{src}翻译成{tgt}。\
+保留每一行的含义、语气和情绪强度；输出长度适合漫画排字。\n{glossary_block}输出格式：每行一条，格式为\"[id] 译文\"，不要任何额外说明。\n\n{lines}"
     )
 }
 
@@ -127,7 +152,7 @@ mod tests {
         let mut g = BTreeMap::new();
         g.insert("ハルカ".to_string(), "Halca".to_string());
         let p = build_prompt("ja", "en", &g, &items());
-        assert!(p.contains("ja to en"));
+        assert!(p.contains("从日语翻译成英语"), "{p}");
         assert!(p.contains("ハルカ => Halca"));
         assert!(p.contains("[b1] こんにちは"));
         assert!(p.contains("[b2] またね"));

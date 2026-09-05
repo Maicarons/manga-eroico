@@ -49,6 +49,13 @@ This project is licensed under **[AGPL-3.0](./LICENSE)**.
 Model weights keep their own licenses — see [docs/reference/licenses.md](./docs/reference/licenses.md).
 
 
+## 🌍 Languages
+
+- **Translate**: 38 target languages, any pair (Hy-MT2) — CJK, Latin, Cyrillic,
+  Arabic, Devanagari, Thai, Tamil, Telugu, Tibetan, Mongolian, Uyghur, ...
+- **OCR read**: 14 recognizer script families (PP-OCRv5/v4/v3)
+- **UI**: 中文 / English / 日本語 / 한국어
+
 ## 🖥️ Headless CLI
 
 The whole pipeline also runs without the GUI:
