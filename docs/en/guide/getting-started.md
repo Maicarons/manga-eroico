@@ -28,3 +28,21 @@ pnpm tauri dev                # desktop app
 ```
 
 See the [development plan](/development-plan) (Chinese) for architecture details.
+
+
+## Command line (me-server)
+
+The full pipeline also runs headless:
+
+```bash
+cargo run -p me-server -- create MyManga.mepro --name MyManga --from ja --to zh
+cargo run -p me-server -- import MyManga.mepro page001.png
+
+# Real inference pipeline (PP-OCRv5 detect + recognize on CPU), --all for batches
+cargo run -p me-server -- run-page MyManga.mepro --all   --llm-url http://127.0.0.1:8990/v1     # LM Studio / Ollama / any OpenAI-compatible endpoint
+  # --polish-url http://127.0.0.1:8990/v1  # optional: enable the polish node
+
+cargo run -p me-server -- status MyManga.mepro
+```
+
+Translated pages land in `MyManga.mepro/artifacts/render/<page>/translated_vNNNN.png`.

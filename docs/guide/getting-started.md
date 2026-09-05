@@ -28,3 +28,23 @@ pnpm tauri dev                # 桌面应用
 ```
 
 架构与完整规划见[开发计划方案](/development-plan)。
+
+
+## 命令行（me-server）
+
+不打开 GUI 也能跑完整管线：
+
+```bash
+# 创建工程并导入页面
+cargo run -p me-server -- create MyManga.mepro --name 我的漫画 --from ja --to zh
+cargo run -p me-server -- import MyManga.mepro page001.png
+
+# 运行真实推理管线（PP-OCRv5 检测+识别，CPU），--all 批量整本
+cargo run -p me-server -- run-page MyManga.mepro --all   --llm-url http://127.0.0.1:8990/v1     # LM Studio / Ollama 等 OpenAI 兼容端点
+  # --polish-url http://127.0.0.1:8990/v1  # 可选：启用润色节点
+
+# 查看进度（页 × 节点完成矩阵）
+cargo run -p me-server -- status MyManga.mepro
+```
+
+成品译图输出在 `MyManga.mepro/artifacts/render/<page>/translated_vNNNN.png`。
