@@ -15,3 +15,4 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 
 [dev-dependencies]
 tempfile = "3"
+tokio = { version = "1", features = ["rt", "macros", "sync"] }
