@@ -117,7 +117,25 @@
     "download": "ダウンロード",
     "downloading": "ダウンロード中 {{percent}}%",
     "verified": "検証済み ✓",
-    "size": "サイズ"
+    "size": "サイズ",
+    "wizard": {
+      "step": {
+        "detect": "1 ハードウェア検出",
+        "recommend": "2 推奨プラン",
+        "select": "3 モデル選択",
+        "download": "4 ダウンロード"
+      },
+      "next": "次へ",
+      "back": "戻る",
+      "recommendIntro": "ハードウェア（{{tier}}）に基づき、以下のモデルを推奨します：",
+      "core": "必須",
+      "startDownload": "ダウンロード開始（{{count}} 件）",
+      "allVerified": "すべてのモデルのダウンロードと SHA256 検証が完了しました",
+      "allVerifiedHint": "ワークフローページで翻訳を始められます。言語パックの追加はいつでもここから。",
+      "resume": "ダウンロード再開",
+      "detecting": "ハードウェア情報を取得中…"
+    },
+    "detecting": "ハードウェア情報を取得中…"
   },
   "settings": {
     "title": "設定",

@@ -117,7 +117,25 @@
     "download": "Download",
     "downloading": "Downloading {{percent}}%",
     "verified": "Verified ✓",
-    "size": "Size"
+    "size": "Size",
+    "wizard": {
+      "step": {
+        "detect": "1 Detect",
+        "recommend": "2 Recommend",
+        "select": "3 Select",
+        "download": "4 Download"
+      },
+      "next": "Next",
+      "back": "Back",
+      "recommendIntro": "Based on your hardware ({{tier}}), we recommend these models:",
+      "core": "required",
+      "startDownload": "Download ({{count}})",
+      "allVerified": "All models downloaded and SHA256-verified",
+      "allVerifiedHint": "Head to the workflow page to start translating; come back anytime for extra language packs.",
+      "resume": "Resume downloads",
+      "detecting": "Reading hardware info…"
+    },
+    "detecting": "Reading hardware info…"
   },
   "settings": {
     "title": "Settings",
