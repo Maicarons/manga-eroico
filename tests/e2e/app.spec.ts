@@ -65,6 +65,9 @@ test.describe("manga-eroico web preview (mocked pipeline)", () => {
   });
 
   test("M3: project overview shows chapter tree and progress matrix", async ({ page }) => {
+    await page.getByTestId("new-project").click();
+    await page.getByTestId("project-name").fill("M3 Overview");
+    await page.getByTestId("create-confirm").click();
     await expect(page.getByTestId("project-card").first()).toBeVisible();
     await page.getByTestId("project-card").first().click();
     await expect(page.getByTestId("project-overview")).toBeVisible();

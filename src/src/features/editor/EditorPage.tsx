@@ -99,12 +99,12 @@ export default function EditorPage() {
         <div
           className="rounded-xl border"
           style={{ borderColor: "var(--border)", background: "var(--surface-2)", width: CANVAS_W }}
+          data-testid="canvas"
         >
           <Stage
             ref={stageRef}
             width={CANVAS_W}
             height={CANVAS_H}
-            data-testid="canvas"
             onMouseDown={(e) => {
               if (e.target === e.target.getStage()) setSelected(null);
             }}
