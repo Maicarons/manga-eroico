@@ -86,6 +86,8 @@ pub trait TranslateProvider: Send + Sync {
     fn translate_batch(&self, prompt: &str) -> anyhow_lite::Result<String>;
 }
 
+pub mod openai;
+
 pub mod anyhow_lite {
     pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 }

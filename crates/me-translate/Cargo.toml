@@ -8,5 +8,7 @@ description = "Hy-MT2 translation: prompt engineering, glossary injection, provi
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
+reqwest = { workspace = true, features = ["json"] }
+tokio = { version = "1", default-features = false, features = ["rt", "rt-multi-thread", "sync"] }
 
 [dev-dependencies]

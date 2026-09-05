@@ -1,0 +1,24 @@
+[package]
+name = "me-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Headless CLI: create projects, import pages, run the real pipeline, inspect progress"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+me-project = { path = "../me-project" }
+pipeline-core = { path = "../pipeline-core" }
+me-translate = { path = "../me-translate" }
+me-render = { path = "../me-render" }
+me-detect = { path = "../me-detect", optional = true }
+me-ocr = { path = "../me-ocr", optional = true }
+sha2 = "0.10"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"], optional = true }
+
+[features]
+default = ["real"]
+real = ["dep:me-detect", "dep:me-ocr", "me-detect/real", "me-ocr/real", "dep:image"]

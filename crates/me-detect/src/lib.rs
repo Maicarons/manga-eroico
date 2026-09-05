@@ -81,6 +81,9 @@ pub trait DetectProvider: Send + Sync {
 }
 
 /// Minimal Result alias without pulling full `anyhow` into the API.
+#[cfg(feature = "real")]
+pub mod real;
+
 pub mod anyhow_lite {
     pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 }

@@ -44,6 +44,9 @@ pub struct ModelSpec {
     pub size_mib: u64,
     /// SHA256 of the file; empty string = not pinned (dev only).
     pub sha256: &'static str,
+    /// Full download URL for non-ModelScope sources (e.g. GitHub releases);
+    /// empty = resolve via ModelScope from `modelscope_repo` + `file`.
+    pub url_override: &'static str,
 }
 
 pub struct Registry;
@@ -51,78 +54,89 @@ pub struct Registry;
 impl Registry {
     /// OCR models (RapidOCR / PaddleOCR PP-OCRv5, Apache-2.0).
     pub fn ocr_specs() -> Vec<ModelSpec> {
+        // NOTE: PP-OCRv5 `ch` recognizer is a mixed zh/en/ja/ko model, so
+        // Japanese and Chinese share one recognizer + dict (verified against
+        // the RapidAI/RapidOCR repo tree on ModelScope, 2026-09).
         vec![
             ModelSpec {
                 id: "ppocrv5_det",
                 role: ModelRole::Detect,
                 lang: Lang::Any,
                 modelscope_repo: "RapidAI/RapidOCR",
-                file: "ch_PP-OCRv5_mobile_det.onnx",
+                file: "onnx/PP-OCRv5/det/ch_PP-OCRv5_det_mobile.onnx",
                 size_mib: 5,
                 sha256: "",
+                url_override: "",
             },
             ModelSpec {
                 id: "ppocrv5_cls",
                 role: ModelRole::Cls,
                 lang: Lang::Any,
                 modelscope_repo: "RapidAI/RapidOCR",
-                file: "ch_ppocr_mobile_v2.0_cls_infer.onnx",
-                size_mib: 1,
+                file: "onnx/PP-OCRv5/cls/ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx",
+                size_mib: 2,
                 sha256: "",
+                url_override: "",
             },
             ModelSpec {
-                id: "rec_ja",
+                id: "rec_mixed",
                 role: ModelRole::Rec,
-                lang: Lang::Ja,
+                lang: Lang::Any,
                 modelscope_repo: "RapidAI/RapidOCR",
-                file: "japan_PP-OCRv5_rec_mobile_infer.onnx",
-                size_mib: 11,
+                file: "onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx",
+                size_mib: 12,
                 sha256: "",
+                url_override: "",
             },
             ModelSpec {
-                id: "dict_ja",
+                id: "dict_mixed",
                 role: ModelRole::Dict,
-                lang: Lang::Ja,
+                lang: Lang::Any,
                 modelscope_repo: "RapidAI/RapidOCR",
-                file: "japan_dict.txt",
+                file: "paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt",
                 size_mib: 1,
                 sha256: "",
-            },
-            ModelSpec {
-                id: "rec_ko",
-                role: ModelRole::Rec,
-                lang: Lang::Ko,
-                modelscope_repo: "RapidAI/RapidOCR",
-                file: "korean_PP-OCRv5_rec_mobile_infer.onnx",
-                size_mib: 10,
-                sha256: "",
-            },
-            ModelSpec {
-                id: "dict_ko",
-                role: ModelRole::Dict,
-                lang: Lang::Ko,
-                modelscope_repo: "RapidAI/RapidOCR",
-                file: "ppocrv5_korean_dict.txt",
-                size_mib: 1,
-                sha256: "",
-            },
-            ModelSpec {
-                id: "rec_zh",
-                role: ModelRole::Rec,
-                lang: Lang::Zh,
-                modelscope_repo: "RapidAI/RapidOCR",
-                file: "ch_PP-OCRv5_rec_mobile_infer.onnx",
-                size_mib: 11,
-                sha256: "",
+                url_override: "",
             },
             ModelSpec {
                 id: "rec_en",
                 role: ModelRole::Rec,
                 lang: Lang::En,
                 modelscope_repo: "RapidAI/RapidOCR",
-                file: "en_PP-OCRv5_rec_mobile_infer.onnx",
+                file: "onnx/PP-OCRv5/rec/en_PP-OCRv5_rec_mobile.onnx",
                 size_mib: 11,
                 sha256: "",
+                url_override: "",
+            },
+            ModelSpec {
+                id: "dict_en",
+                role: ModelRole::Dict,
+                lang: Lang::En,
+                modelscope_repo: "RapidAI/RapidOCR",
+                file: "paddle/PP-OCRv5/rec/en_PP-OCRv5_rec_mobile/ppocrv5_en_dict.txt",
+                size_mib: 1,
+                sha256: "",
+                url_override: "",
+            },
+            ModelSpec {
+                id: "rec_ko",
+                role: ModelRole::Rec,
+                lang: Lang::Ko,
+                modelscope_repo: "RapidAI/RapidOCR",
+                file: "onnx/PP-OCRv5/rec/korean_PP-OCRv5_rec_mobile.onnx",
+                size_mib: 11,
+                sha256: "",
+                url_override: "",
+            },
+            ModelSpec {
+                id: "dict_ko",
+                role: ModelRole::Dict,
+                lang: Lang::Ko,
+                modelscope_repo: "RapidAI/RapidOCR",
+                file: "paddle/PP-OCRv5/rec/korean_PP-OCRv5_rec_mobile/ppocrv5_korean_dict.txt",
+                size_mib: 1,
+                sha256: "",
+                url_override: "",
             },
         ]
     }
@@ -131,31 +145,34 @@ impl Registry {
     pub fn llm_specs() -> Vec<ModelSpec> {
         vec![
             ModelSpec {
-                id: "hymt2_1.8b_q4",
+                id: "hymt2_1.8b_iq2_m",
                 role: ModelRole::Llm,
                 lang: Lang::Any,
-                modelscope_repo: "Tencent-Hunyuan/Hy-MT2",
-                file: "hy-mt2-1.8b-q4_0.gguf",
-                size_mib: 1100,
+                modelscope_repo: "unsloth/Hy-MT2-1.8B-GGUF",
+                file: "Hy-MT2-1.8B-UD-IQ2_M.gguf",
+                size_mib: 723,
                 sha256: "",
+                url_override: "",
             },
             ModelSpec {
                 id: "hymt2_7b_q4",
                 role: ModelRole::Llm,
                 lang: Lang::Any,
-                modelscope_repo: "Tencent-Hunyuan/Hy-MT2",
-                file: "hy-mt2-7b-q4_0.gguf",
-                size_mib: 4200,
+                modelscope_repo: "unsloth/Hy-MT2-7B-GGUF",
+                file: "Hy-MT2-7B-UD-Q4_K_XL.gguf",
+                size_mib: 4783,
                 sha256: "",
+                url_override: "",
             },
             ModelSpec {
                 id: "hymt2_30b_a3b_q4",
                 role: ModelRole::Llm,
                 lang: Lang::Any,
-                modelscope_repo: "Tencent-Hunyuan/Hy-MT2",
-                file: "hy-mt2-30b-a3b-q4_0.gguf",
-                size_mib: 17000,
+                modelscope_repo: "alphaZimuth/Hy-MT2-30B-A3B-APEX-GGUF",
+                file: "Hy-MT2-30B-A3B-APEX-Imatrix-I-Nano.gguf",
+                size_mib: 12448,
                 sha256: "",
+                url_override: "",
             },
         ]
     }
@@ -168,7 +185,8 @@ impl Registry {
                 role: ModelRole::Inpaint,
                 lang: Lang::Any,
                 modelscope_repo: "zyddnys/manga-image-translator",
-                file: "aot_inpainter.onnx",
+                file: "inpainting.ckpt",
+                url_override: "https://github.com/zyddnys/manga-image-translator/releases/latest/download/inpainting.ckpt",
                 size_mib: 90,
                 sha256: "",
             },
@@ -177,9 +195,10 @@ impl Registry {
                 role: ModelRole::Inpaint,
                 lang: Lang::Any,
                 modelscope_repo: "zyddnys/manga-image-translator",
-                file: "lama_mpe.onnx",
+                file: "inpainting_lama_mpe.ckpt",
                 size_mib: 200,
                 sha256: "",
+                url_override: "https://github.com/zyddnys/manga-image-translator/releases/latest/download/inpainting_lama_mpe.ckpt",
             },
         ]
     }
@@ -198,7 +217,7 @@ impl Registry {
     /// The default LLM for a tier (see development-plan §4.2 matrix).
     pub fn llm_for_tier(tier: Tier) -> &'static str {
         match tier {
-            Tier::Lite => "hymt2_1.8b_q4",
+            Tier::Lite => "hymt2_1.8b_iq2_m",
             Tier::Standard => "hymt2_7b_q4",
             Tier::Pro => "hymt2_30b_a3b_q4",
         }
@@ -220,15 +239,15 @@ mod tests {
 
     #[test]
     fn find_works() {
-        let m = Registry::find("rec_ja").unwrap();
+        let m = Registry::find("rec_mixed").unwrap();
         assert_eq!(m.role, ModelRole::Rec);
-        assert_eq!(m.lang, Lang::Ja);
+        assert_eq!(m.lang, Lang::Any);
         assert!(Registry::find("nope").is_none());
     }
 
     #[test]
     fn tier_llm_mapping() {
-        assert_eq!(Registry::llm_for_tier(Tier::Lite), "hymt2_1.8b_q4");
+        assert_eq!(Registry::llm_for_tier(Tier::Lite), "hymt2_1.8b_iq2_m");
         assert_eq!(Registry::llm_for_tier(Tier::Standard), "hymt2_7b_q4");
         assert_eq!(Registry::llm_for_tier(Tier::Pro), "hymt2_30b_a3b_q4");
     }

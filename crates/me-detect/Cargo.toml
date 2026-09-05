@@ -6,7 +6,12 @@ license.workspace = true
 description = "Text-region detection: geometry utilities, provider trait, ONNX backend behind a feature"
 
 [dependencies]
+image = { version = "0.25.10", optional = true, default-features = false, features = ["jpeg", "png"] }
+ort = { version = "2.0.0-rc.13", features = ["download-binaries"], optional = true }
 serde = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+
+[features]
+real = ["dep:ort", "dep:image"]

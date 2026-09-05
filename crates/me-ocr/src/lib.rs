@@ -35,7 +35,7 @@ pub fn ctc_greedy_decode(probs: &[Vec<f32>], blank: usize, charset: &[&str]) -> 
             .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
             .unwrap_or((blank, &0.0));
         if best_idx != blank && best_idx != prev {
-            if let Some(label) = charset.get(best_idx - 1) {
+            if let Some(label) = charset.get(best_idx) {
                 text.push_str(label);
                 confidences.push(*best_p);
             }
@@ -87,6 +87,9 @@ pub trait OcrProvider: Send + Sync {
     fn recognize(&self, image: &[u8], lang: OcrLang) -> anyhow_lite::Result<Vec<OcrLine>>;
 }
 
+#[cfg(feature = "real")]
+pub mod real;
+
 pub mod anyhow_lite {
     pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 }
@@ -106,8 +109,8 @@ mod tests {
 
     #[test]
     fn ctc_collapses_repeats_and_blanks() {
-        // charset: 0 blank, then "あ","い","う"
-        let charset = ["あ", "い", "う"];
+        // charset: 0 blank placeholder, then "あ","い","う" (direct indexing)
+        let charset = ["", "あ", "い", "う"];
         let f = |idx: usize, p: f32| {
             let mut v = vec![0.0f32; 4];
             v[idx] = p;
@@ -125,7 +128,7 @@ mod tests {
 
     #[test]
     fn ctc_blank_between_same_chars_keeps_both() {
-        let charset = ["a", "b"];
+        let charset = ["", "a", "b"];
         let f = |idx: usize, p: f32| {
             let mut v = vec![0.0f32; 3];
             v[idx] = p;
