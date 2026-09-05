@@ -49,11 +49,13 @@ fn golden_layout_plans() {
     }
     let snap_path = format!("{}/tests/snapshots/plans.txt", env!("CARGO_MANIFEST_DIR"));
     // git autocrlf may check the snapshot out with CRLF on Windows
-    let expected = std::fs::read_to_string(&snap_path).map(|e| e.replace("
-", "
-")).unwrap_or_else(|_| {
-        panic!("missing snapshot {snap_path}; regenerate via: cargo run -p me-render --example write_golden")
-    });
+    let expected = std::fs::read_to_string(&snap_path)
+        .map(|e| e.replace("\r\n", "\n"))
+        .unwrap_or_else(|_| {
+            panic!(
+                "missing snapshot {snap_path}; regenerate via: cargo run -p me-render --example write_golden"
+            )
+        });
     assert_eq!(
         all, expected,
         "layout plan changed; review and regenerate via: cargo run -p me-render --example write_golden"
