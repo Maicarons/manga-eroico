@@ -8,6 +8,7 @@
 Rust + React + Tauri · Powered by [RapidOCR](https://github.com/RapidAI/RapidOCR) & [Hy-MT2](https://github.com/Tencent-Hunyuan/Hy-MT2)
 
 [![CI](https://github.com/Maicarons/manga-eroico/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
+[![Release](https://github.com/Maicarons/manga-eroico/actions/workflows/release.yml/badge.svg)](https://github.com/Maicarons/manga-eroico/releases)
 [![Docs](https://img.shields.io/badge/docs-vitepress-blue)](https://maicarons.github.io/manga-eroico/)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-green.svg)](./LICENSE)
 
@@ -46,3 +47,17 @@ pnpm test         # frontend unit tests
 
 This project is licensed under **[AGPL-3.0](./LICENSE)**.
 Model weights keep their own licenses — see [docs/reference/licenses.md](./docs/reference/licenses.md).
+
+
+## 🖥️ Headless CLI
+
+The whole pipeline also runs without the GUI:
+
+```bash
+cargo run -p me-server -- create MyManga.mepro --from ja --to zh
+cargo run -p me-server -- import-folder MyManga.mepro ./my-manga/
+cargo run -p me-server -- run-page MyManga.mepro --all --llm-url http://127.0.0.1:8990/v1
+cargo run -p me-server -- status MyManga.mepro
+```
+
+See the [docs](https://maicarons.github.io/manga-eroico/) for full guides (zh/en/ja/ko).

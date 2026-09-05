@@ -2740,6 +2740,7 @@ dependencies = [
  "image",
  "imageproc",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
