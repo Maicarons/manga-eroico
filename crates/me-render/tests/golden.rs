@@ -48,7 +48,10 @@ fn golden_layout_plans() {
         all.push('\n');
     }
     let snap_path = format!("{}/tests/snapshots/plans.txt", env!("CARGO_MANIFEST_DIR"));
-    let expected = std::fs::read_to_string(&snap_path).unwrap_or_else(|_| {
+    // git autocrlf may check the snapshot out with CRLF on Windows
+    let expected = std::fs::read_to_string(&snap_path).map(|e| e.replace("
+", "
+")).unwrap_or_else(|_| {
         panic!("missing snapshot {snap_path}; regenerate via: cargo run -p me-render --example write_golden")
     });
     assert_eq!(
