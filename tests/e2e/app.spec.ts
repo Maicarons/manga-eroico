@@ -29,11 +29,20 @@ test.describe("manga-eroico web preview (mocked pipeline)", () => {
     });
   });
 
-  test("model page shows hardware card and mock download", async ({ page }) => {
+  test("model wizard: detect, recommend, select, mock download", async ({ page }) => {
     await page.getByRole("link", { name: /模型管理|Models|モデル管理|모델 관리/ }).click();
+    // step 1: hardware detection
     await expect(page.getByTestId("hardware-card")).toBeVisible();
-    const btn = page.getByTestId("download-ppocrv5_det");
-    await btn.click();
-    await expect(page.getByTestId("hardware-card")).toBeVisible();
+    const next = page.getByRole("button", { name: /下一步|Next|次へ|다음/ });
+    // step 2: tier recommendation
+    await next.click();
+    // step 3: model selection
+    await next.click();
+    await expect(page.getByTestId("model-ppocrv5_det")).toBeVisible();
+    await expect(page.getByTestId("start-download")).toBeEnabled();
+    // step 4: mock download streams to 100% and everything verifies
+    await page.getByTestId("start-download").click();
+    await expect(page.getByTestId("dl-ppocrv5_det")).toBeVisible();
+    await expect(page.getByTestId("download-complete")).toBeVisible({ timeout: 15_000 });
   });
 });
