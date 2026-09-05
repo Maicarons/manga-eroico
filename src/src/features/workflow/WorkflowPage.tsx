@@ -64,6 +64,9 @@ export default function WorkflowPage() {
   );
   const [running, setRunning] = useState(false);
   const [events, setEvents] = useState<PipelineEvent[]>([]);
+  const [polishPreview, setPolishPreview] = useState<{ analysis: string; items: Array<{ id: string; polished: string; note: string | null }> } | null>(null);
+  const [adopted, setAdopted] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   const labels = {
     detect: t("workflow.detect"),
@@ -175,6 +178,89 @@ export default function WorkflowPage() {
           ))
         )}
       </div>
+
+      {events.some((ev) => ev.step === "render" && ev.status === "completed") && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <a
+            href="#/editor"
+            data-testid="open-editor"
+            className="inline-block cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold transition-opacity duration-200"
+            style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
+          >
+            {t("workflow.openEditor")}
+          </a>
+          {states.polish.enabled && (
+            <button
+              onClick={async () => {
+                const res = await api.polishPreview([
+                  { id: "b001", page: 1, position: 1, source_text: "こんにちは", machine_translation: "你好" },
+                  { id: "b002", page: 1, position: 2, source_text: "またね", machine_translation: "再见" },
+                ]);
+                setPolishPreview(res);
+              }}
+              className="cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium transition-colors duration-200"
+              style={{ borderColor: "var(--border)" }}
+              data-testid="polish-preview"
+            >
+              {t("workflow.polishPreview")}
+            </button>
+          )}
+        </div>
+      )}
+
+      {polishPreview && (
+        <div
+          className="mt-3 rounded-xl border p-4"
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+          data-testid="polish-diff"
+        >
+          <div className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
+            {polishPreview.analysis}
+          </div>
+          {polishPreview.items.map((item) => {
+            const isAdopted = adopted.has(item.id);
+            const isDismissed = dismissed.has(item.id);
+            return (
+              <div
+                key={item.id}
+                className="mb-2 flex items-center justify-between gap-4 rounded-lg border p-2 text-sm"
+                style={{ borderColor: "var(--border)", opacity: isDismissed ? 0.5 : 1 }}
+                data-testid={`diff-${item.id}`}
+              >
+                <div className="min-w-0 flex-1">
+                  <span style={{ color: "var(--text-muted)" }}>{item.id}</span>{" "}
+                  <s style={{ opacity: isAdopted ? 0.5 : 1 }}>{item.polished.replace(/^✨ /, "")}</s>{" "}
+                  <span style={{ color: isAdopted ? "var(--ok)" : "var(--accent)", fontWeight: 600 }}>{item.polished}</span>
+                </div>
+                <div className="flex shrink-0 gap-2 text-xs">
+                  <button
+                    onClick={() => {
+                      setAdopted((s0) => new Set(s0).add(item.id));
+                      setDismissed((s0) => { const n = new Set(s0); n.delete(item.id); return n; });
+                    }}
+                    className="cursor-pointer rounded-md border px-2 py-1 transition-colors duration-200"
+                    style={{ borderColor: isAdopted ? "var(--ok)" : "var(--border)", color: isAdopted ? "var(--ok)" : "var(--text)" }}
+                    data-testid={`adopt-${item.id}`}
+                  >
+                    {t("workflow.adopt")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDismissed((s0) => new Set(s0).add(item.id));
+                      setAdopted((s0) => { const n = new Set(s0); n.delete(item.id); return n; });
+                    }}
+                    className="cursor-pointer rounded-md border px-2 py-1 transition-colors duration-200"
+                    style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+                    data-testid={`dismiss-${item.id}`}
+                  >
+                    {t("workflow.dismiss")}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

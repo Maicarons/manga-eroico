@@ -77,6 +77,42 @@ async function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
     case "create_project":
       mockProjectName = String(args?.name ?? "Mock Project");
       return { ...mockProject, name: mockProjectName } as T;
+    case "get_project_overview":
+      return {
+        name: mockProjectName || "Mock Project",
+        nodes: ["detect", "ocr", "inpaint", "translate", "render"],
+        chapters: [
+          {
+            title: "Ch1",
+            pages: [
+              {
+                id: "pg_mock_1",
+                file: "001.png",
+                nodes: { detect: true, ocr: true, inpaint: true, translate: true, render: true },
+              },
+              {
+                id: "pg_mock_2",
+                file: "002.png",
+                nodes: { detect: true, ocr: true, inpaint: false, translate: false, render: false },
+              },
+            ],
+          },
+        ],
+      } as T;
+    case "get_translated_page": {
+      // synthetic translated page for the browser preview
+      const c = document.createElement("canvas");
+      c.width = 620; c.height = 420;
+      const g = c.getContext("2d");
+      if (g) {
+        g.fillStyle = "#ffffff"; g.fillRect(0, 0, 620, 420);
+        g.strokeStyle = "#cccccc"; g.strokeRect(4, 4, 612, 412);
+        g.fillStyle = "#333333";
+        g.font = "22px sans-serif";
+        g.fillText("[mock page]", 24, 40);
+      }
+      return c.toDataURL("image/png") as T;
+    }
     case "open_project":
       return { ...mockProject, name: mockProjectName } as T;
     case "save_project":
@@ -154,6 +190,17 @@ export interface PolishResult {
 export const api = {
   greet: (name: string) => invoke<string>("greet", { name }),
   getHardwareInfo: () => invoke<HardwareReport>("get_hardware_info"),
+  getTranslatedPage: (pageId: string = "current") =>
+    invoke<string | null>("get_translated_page", { pageId }),
+  getProjectOverview: () =>
+    invoke<{
+      name: string;
+      nodes: string[];
+      chapters: Array<{
+        title: string;
+        pages: Array<{ id: string; file: string; nodes: Record<string, boolean> }>;
+      }>;
+    } | null>("get_project_overview"),
   listModels: () => invoke<ModelSpec[]>("list_models"),
   downloadModel: (specId: string, destDir = "models") =>
     invoke<string>("download_model", { specId, destDir }),

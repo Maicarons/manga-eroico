@@ -69,7 +69,11 @@
     "running": "パイプライン実行中…",
     "done": "処理完了",
     "failedMsg": "パイプライン失敗：{{message}}",
-    "events": "リアルタイムイベント"
+    "events": "リアルタイムイベント",
+    "openEditor": "エディタで調整 →",
+    "polishPreview": "推敲プレビュー",
+    "adopt": "採用",
+    "dismiss": "却下"
   },
   "editor": {
     "title": "漫画エディター",
@@ -84,7 +88,12 @@
     "polished": "推敲後",
     "adopt": "採用",
     "ignore": "却下",
-    "export": "書き出し"
+    "export": "書き出し",
+    "loadPage": "訳ページを読み込む",
+    "pageLoaded": "読み込み済み",
+    "dragHint": "吹き出しをドラッグで移動",
+    "noSelection": "キャンバス上の吹き出しをクリックして編集",
+    "exported": "書き出し完了 ✓"
   },
   "models": {
     "title": "モデル管理",

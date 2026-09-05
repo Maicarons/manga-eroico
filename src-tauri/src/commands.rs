@@ -52,6 +52,72 @@ pub fn get_llm_for_tier(tier: Tier) -> String {
     Registry::llm_for_tier(tier).to_string()
 }
 
+/// Returns the latest translated page for `page_id` as a base64 data URL,
+/// or None when the project has no render artifact yet.
+#[tauri::command]
+pub fn get_translated_page(state: State<'_, AppState>, page_id: String) -> Result<Option<String>, String> {
+    let path = state.open_project.lock().clone().ok_or("no project open")?;
+    let p = Project::open(&path).map_err(|e| e.to_string())?;
+    let Some((_, bytes)) = p.latest_artifact("render", &page_id).map_err(|e| e.to_string())? else {
+        return Ok(None);
+    };
+    if bytes.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(format!("data:image/png;base64,{}", base64_encode(&bytes))))
+}
+
+/// Minimal standard base64 (no external dep needed for this one use).
+fn base64_encode(data: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    for chunk in data.chunks(3) {
+        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | b[2] as u32;
+        out.push(TABLE[(n >> 18) as usize & 63] as char);
+        out.push(TABLE[(n >> 12) as usize & 63] as char);
+        out.push(if chunk.len() > 1 { TABLE[(n >> 6) as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 2 { TABLE[n as usize & 63] as char } else { '=' });
+    }
+    out
+}
+
+/// Chapter tree + page-by-node completion matrix for the open project.
+#[tauri::command]
+pub fn get_project_overview(state: State<'_, AppState>) -> Result<Option<serde_json::Value>, String> {
+    let path = state.open_project.lock().clone().ok_or("no project open")?;
+    let p = Project::open(&path).map_err(|e| e.to_string())?;
+    let nodes = ["detect", "ocr", "inpaint", "translate", "render"];
+    let chapters: Vec<serde_json::Value> = p
+        .file()
+        .chapters
+        .iter()
+        .map(|ch| {
+            let pages: Vec<serde_json::Value> = ch
+                .page_ids
+                .iter()
+                .filter_map(|pid| p.page(pid))
+                .map(|pg| {
+                    let node_status: serde_json::Map<String, serde_json::Value> = nodes
+                        .iter()
+                        .map(|n| {
+                            let done = p.latest_artifact(n, &pg.id).ok().flatten().is_some();
+                            (n.to_string(), serde_json::Value::Bool(done))
+                        })
+                        .collect();
+                    serde_json::json!({ "id": pg.id, "file": pg.file_name, "nodes": node_status })
+                })
+                .collect();
+            serde_json::json!({ "title": ch.title, "pages": pages })
+        })
+        .collect();
+    Ok(Some(serde_json::json!({
+        "name": p.file().name,
+        "nodes": nodes,
+        "chapters": chapters,
+    })))
+}
+
 /// Downloads a model from ModelScope into the app data dir, streaming progress
 /// events on the `model-download` channel.
 #[tauri::command]

@@ -45,4 +45,45 @@ test.describe("manga-eroico web preview (mocked pipeline)", () => {
     await expect(page.getByTestId("dl-ppocrv5_det")).toBeVisible();
     await expect(page.getByTestId("download-complete")).toBeVisible({ timeout: 15_000 });
   });
+
+  test("M3 loop: run pipeline, open editor, fine-tune, export", async ({ page }) => {
+    await page.getByRole("link", { name: /工作流|Workflow|ワークフロー|워크플로/ }).click();
+    const run = page.getByTestId("run-page");
+    await run.click();
+    // mock pipeline streams events; render completion reveals the editor link
+    await expect(page.getByTestId("open-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId("open-editor").click();
+    await expect(page.getByTestId("editor-page")).toBeVisible();
+    await expect(page.getByTestId("canvas")).toBeVisible();
+    // fine-tune: edit the selected bubble text
+    await page.getByTestId("bubble-text").fill("你好，世界！");
+    // export triggers a PNG download from the Konva stage
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByTestId("export-png").click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("manga-eroico-page.png");
+  });
+
+  test("M3: project overview shows chapter tree and progress matrix", async ({ page }) => {
+    await expect(page.getByTestId("project-card").first()).toBeVisible();
+    await page.getByTestId("project-card").first().click();
+    await expect(page.getByTestId("project-overview")).toBeVisible();
+    await expect(page.getByTestId("progress-matrix")).toBeVisible();
+    await expect(page.getByTestId("row-pg_mock_2")).toBeVisible();
+  });
+
+  test("M3: polish preview adopt and dismiss per bubble", async ({ page }) => {
+    await page.getByRole("link", { name: /工作流|Workflow|ワークフロー|워크플로/ }).click();
+    // enable the polish node, run the page
+    await page.getByTestId("toggle-polish").click();
+    await page.getByTestId("run-page").click();
+    await expect(page.getByTestId("polish-preview")).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId("polish-preview").click();
+    await expect(page.getByTestId("polish-diff")).toBeVisible();
+    await page.getByTestId("adopt-b001").click();
+    await page.getByTestId("dismiss-b002").click();
+    // adopted bubbles stay highlighted; dismissed ones fade
+    await expect(page.getByTestId("diff-b001")).toBeVisible();
+    await expect(page.getByTestId("diff-b002")).toBeVisible();
+  });
 });

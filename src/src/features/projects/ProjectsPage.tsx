@@ -4,6 +4,15 @@ import { useNavigate } from "react-router-dom";
 import { useProjects } from "./projectsStore";
 import { api } from "@/lib/tauri";
 
+interface Overview {
+  name: string;
+  nodes: string[];
+  chapters: Array<{
+    title: string;
+    pages: Array<{ id: string; file: string; nodes: Record<string, boolean> }>;
+  }>;
+}
+
 const LANGS = [
   { code: "ja", label: "日本語" },
   { code: "en", label: "English" },
@@ -16,6 +25,7 @@ export default function ProjectsPage() {
   const navigate = useNavigate();
   const { projects, upsert, setActive } = useProjects();
   const [creating, setCreating] = useState(false);
+  const [overview, setOverview] = useState<Overview | null>(null);
   const [name, setName] = useState("");
   const [source, setSource] = useState("ja");
   const [target, setTarget] = useState("zh");
@@ -143,9 +153,10 @@ export default function ProjectsPage() {
               data-testid="project-card"
               className="cursor-pointer rounded-xl border p-4 transition-transform hover:scale-[1.01]"
               style={{ borderColor: "var(--border)", background: "var(--surface)" }}
-              onClick={() => {
+              onClick={async () => {
                 setActive(p.root);
-                navigate("/workflow");
+                const ov = await api.getProjectOverview();
+                setOverview(ov ?? null);
               }}
             >
               <div className="text-sm font-semibold">{p.name}</div>
@@ -153,6 +164,69 @@ export default function ProjectsPage() {
                 {p.sourceLang.toUpperCase()} → {p.targetLang.toUpperCase()} · {t("projects.pages")} {p.pages} ·{" "}
                 {t("projects.chapters")} {p.chapters}
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {overview && (
+        <div
+          className="mt-6 rounded-xl border p-4"
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+          data-testid="project-overview"
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-sm font-semibold">
+              {t("projects.overview")} · {overview.name}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => navigate("/workflow")}
+                className="cursor-pointer rounded-lg border px-3 py-1.5 text-xs transition-colors duration-200"
+                style={{ borderColor: "var(--border)" }}
+              >
+                {t("projects.openWorkflow")}
+              </button>
+              <button
+                onClick={() => setOverview(null)}
+                className="cursor-pointer rounded-lg border px-3 py-1.5 text-xs transition-colors duration-200"
+                style={{ borderColor: "var(--border)" }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          {overview.chapters.map((ch) => (
+            <div key={ch.title} className="mb-3">
+              <div className="mb-1 text-xs font-semibold">📁 {ch.title}</div>
+              <table className="w-full text-left text-xs" data-testid="progress-matrix">
+                <thead>
+                  <tr style={{ color: "var(--text-muted)" }}>
+                    <th className="py-1 pr-2">{t("projects.page")}</th>
+                    {overview.nodes.map((n) => (
+                      <th key={n} className="py-1 pr-2">
+                        {t(`models.role.${n === "detect" ? "detect" : n}`)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {ch.pages.map((pg) => (
+                    <tr key={pg.id} data-testid={`row-${pg.id}`}>
+                      <td className="py-1 pr-2 font-mono">{pg.file}</td>
+                      {overview.nodes.map((n) => (
+                        <td key={n} className="py-1 pr-2">
+                          {pg.nodes[n] ? (
+                            <span style={{ color: "var(--ok)" }}>●</span>
+                          ) : (
+                            <span style={{ color: "var(--text-muted)" }}>○</span>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ))}
         </div>

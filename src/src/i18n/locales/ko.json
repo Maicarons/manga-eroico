@@ -69,7 +69,11 @@
     "running": "파이프라인 실행 중…",
     "done": "처리 완료",
     "failedMsg": "파이프라인 실패: {{message}}",
-    "events": "실시간 이벤트"
+    "events": "실시간 이벤트",
+    "openEditor": "에디터에서 조정 →",
+    "polishPreview": "다듬기 미리보기",
+    "adopt": "채택",
+    "dismiss": "제외"
   },
   "editor": {
     "title": "만화 편집기",
@@ -84,7 +88,12 @@
     "polished": "다듬은 결과",
     "adopt": "채택",
     "ignore": "무시",
-    "export": "내보내기"
+    "export": "내보내기",
+    "loadPage": "번역 페이지 불러오기",
+    "pageLoaded": "페이지 로드됨",
+    "dragHint": "말풍선을 드래그하여 이동",
+    "noSelection": "캔버스에서 말풍선을 클릭하여 편집",
+    "exported": "내보내기 완료 ✓"
   },
   "models": {
     "title": "모델 관리",

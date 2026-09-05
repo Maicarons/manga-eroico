@@ -69,7 +69,11 @@
     "running": "Pipeline running…",
     "done": "Page processed",
     "failedMsg": "Pipeline failed: {{message}}",
-    "events": "Live events"
+    "events": "Live events",
+    "openEditor": "Fine-tune in editor →",
+    "polishPreview": "Polish preview",
+    "adopt": "Adopt",
+    "dismiss": "Dismiss"
   },
   "editor": {
     "title": "Manga editor",
@@ -84,7 +88,12 @@
     "polished": "Polished",
     "adopt": "Adopt",
     "ignore": "Ignore",
-    "export": "Export"
+    "export": "Export",
+    "loadPage": "Load translated page",
+    "pageLoaded": "Page loaded",
+    "dragHint": "Drag bubbles to reposition",
+    "noSelection": "Click a bubble on the canvas to edit",
+    "exported": "Exported ✓"
   },
   "models": {
     "title": "Model manager",

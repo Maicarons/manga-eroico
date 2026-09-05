@@ -69,7 +69,11 @@
     "running": "流水线运行中…",
     "done": "本页处理完成",
     "failedMsg": "流水线失败：{{message}}",
-    "events": "实时事件"
+    "events": "实时事件",
+    "openEditor": "在编辑器中微调 →",
+    "polishPreview": "润色预览",
+    "adopt": "采纳",
+    "dismiss": "忽略"
   },
   "editor": {
     "title": "漫画编辑器",
@@ -84,7 +88,12 @@
     "polished": "润色",
     "adopt": "采纳",
     "ignore": "忽略",
-    "export": "导出成品"
+    "export": "导出成品",
+    "loadPage": "加载译图",
+    "pageLoaded": "译图已加载",
+    "dragHint": "拖拽气泡调整位置",
+    "noSelection": "点击画布中的气泡进行编辑",
+    "exported": "已导出 ✓"
   },
   "models": {
     "title": "模型管理",

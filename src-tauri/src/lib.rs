@@ -29,6 +29,8 @@ pub async fn run() {
             download_model,
             create_project,
             open_project,
+            commands::get_translated_page,
+            commands::get_project_overview,
             save_project,
             add_page,
             add_chapter,
