@@ -151,7 +151,7 @@ export default function ProjectsPage() {
             <div
               key={p.root}
               data-testid="project-card"
-              className="cursor-pointer rounded-xl border p-4 transition-transform hover:scale-[1.01]"
+              className="cursor-pointer rounded-xl border p-4 transition-colors duration-200 hover:shadow-md"
               style={{ borderColor: "var(--border)", background: "var(--surface)" }}
               onClick={async () => {
                 setActive(p.root);
