@@ -69,7 +69,7 @@ async function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
       // fake a download with progress
       for (const pct of [25, 50, 75, 100]) {
         window.dispatchEvent(
-          new CustomEvent("mock-model-download", { detail: { id: args?.spec_id, percent: pct } }),
+          new CustomEvent("mock-model-download", { detail: { id: (args?.specId ?? args?.spec_id) as string, percent: pct } }),
         );
         await new Promise((r) => setTimeout(r, 150));
       }
@@ -92,9 +92,9 @@ async function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
       // emit the same event sequence the Rust host would
       const steps = ["detect", "ocr", "inpaint", "translate", "polish", "render"];
       for (const step of steps) {
-        emitPipeline({ page: { 0: args?.page_id }, step, status: "running", progress: null, message: null });
+        emitPipeline({ page: { 0: args?.pageId ?? args?.page_id }, step, status: "running", progress: null, message: null });
         await new Promise((r) => setTimeout(r, 120));
-        emitPipeline({ page: { 0: args?.page_id }, step, status: "completed", progress: 100, message: null });
+        emitPipeline({ page: { 0: args?.pageId ?? args?.page_id }, step, status: "completed", progress: 100, message: null });
       }
       return true as T;
     }
