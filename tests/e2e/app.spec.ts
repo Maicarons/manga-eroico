@@ -68,6 +68,9 @@ test.describe("manga-eroico web preview (mocked pipeline)", () => {
     await page.getByTestId("new-project").click();
     await page.getByTestId("project-name").fill("M3 Overview");
     await page.getByTestId("create-confirm").click();
+    // creation navigates to the workflow page; go back to the library
+    await expect(page.getByTestId("workflow-page")).toBeVisible();
+    await page.getByRole("link", { name: /工程库|Projects|プロジェクト|프로젝트/ }).click();
     await expect(page.getByTestId("project-card").first()).toBeVisible();
     await page.getByTestId("project-card").first().click();
     await expect(page.getByTestId("project-overview")).toBeVisible();
