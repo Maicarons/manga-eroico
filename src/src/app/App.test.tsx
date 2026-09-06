@@ -49,8 +49,10 @@ describe("App shell", () => {
   });
 
   it("redirects workflow/editor to the library when no project is active", () => {
-    // zustand is a module singleton: earlier tests left an active project
+    // zustand is a module singleton AND localStorage persists across tests
+    // in the same file; App.restore() would resurrect the active project
     useProjects.setState({ projects: [], activeRoot: null, activated: false });
+    localStorage.clear();
     const wf = renderApp("/workflow");
     expect(screen.getByTestId("projects-page")).toBeInTheDocument();
     wf.unmount();
