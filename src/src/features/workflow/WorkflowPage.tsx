@@ -103,7 +103,17 @@ export default function WorkflowPage() {
   const runPage = async () => {
     setRunning(true);
     try {
-      await api.runPipelinePage("pg_demo");
+      // run the first page of the open project; fall back to a demo id so
+      // the mocked pipeline is still demonstrable without imported pages
+      let pageId = "pg_demo";
+      try {
+        const ov = await api.getProjectOverview();
+        const first = ov?.chapters.flatMap((c) => c.pages)[0];
+        if (first) pageId = first.id;
+      } catch {
+        // keep demo id
+      }
+      await api.runPipelinePage(pageId);
     } finally {
       setRunning(false);
     }

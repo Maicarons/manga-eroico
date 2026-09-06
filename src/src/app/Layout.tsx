@@ -4,11 +4,31 @@ import { useTheme, type Theme } from "@/lib/theme";
 import { LANG_META, SUPPORTED_LANGS, type SupportedLang } from "@/i18n";
 
 const NAV = [
-  { to: "/projects", key: "nav.projects", icon: "🗂️" },
-  { to: "/workflow", key: "nav.workflow", icon: "🔀" },
-  { to: "/editor", key: "nav.editor", icon: "🖌️" },
-  { to: "/models", key: "nav.models", icon: "📦" },
-  { to: "/settings", key: "nav.settings", icon: "⚙️" },
+  {
+    to: "/projects",
+    key: "nav.projects",
+    path: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
+  },
+  {
+    to: "/workflow",
+    key: "nav.workflow",
+    path: "M12 5v4m0 0-5.5 6.5M12 9l5.5 6.5M5 19h.01M19 19h.01M12 3.5h.01",
+  },
+  {
+    to: "/editor",
+    key: "nav.editor",
+    path: "M4 20h16M6 16l10-10 2 2-10 10H6z",
+  },
+  {
+    to: "/models",
+    key: "nav.models",
+    path: "M12 3 3 8l9 5 9-5zM3 8v8l9 5 9-5V8",
+  },
+  {
+    to: "/settings",
+    key: "nav.settings",
+    path: "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2",
+  },
 ] as const;
 
 const THEME_OPTIONS: Theme[] = ["light", "dark", "system"];
@@ -43,8 +63,19 @@ export default function Layout() {
               isActive ? { background: "var(--accent)", color: "var(--accent-contrast)" } : {}
             }
           >
-            <span className="mr-2">{item.icon}</span>
-            {t(item.key)}
+            <svg
+              className="mr-2 h-4 w-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d={item.path} />
+            </svg>
+            <span data-testid={`nav-${item.to.slice(1)}`}>{t(item.key)}</span>
           </NavLink>
         ))}
 
@@ -73,6 +104,7 @@ export default function Layout() {
                   key={th}
                   onClick={() => setTheme(th)}
                   aria-pressed={theme === th}
+                  data-testid={`theme-${th}`}
                   title={t(`nav.theme.${th}`)}
                   className="rounded px-2 py-1"
                   style={{

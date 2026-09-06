@@ -213,6 +213,15 @@ export const api = {
       }>;
     } | null>("get_project_overview"),
   listModels: () => invoke<ModelSpec[]>("list_models"),
+  openProject: (root: string) =>
+    invoke<{ name: string; source_lang: string; target_lang: string }>("open_project", { root }),
+  saveProject: () => invoke<void>("save_project"),
+  addPage: (fileName: string, width: number, height: number) =>
+    invoke<string>("add_page", { fileName, width, height }),
+  addChapter: (title: string, pageIds: string[]) =>
+    invoke<string>("add_chapter", { title, pageIds }),
+  setGlossaryTerm: (term: string, translation: string) =>
+    invoke<void>("set_glossary_term", { term, translation }),
   downloadModel: (specId: string, destDir = "models") =>
     invoke<string>("download_model", { specId, destDir }),
   createProject: (root: string, name: string, sourceLang: string, targetLang: string) =>

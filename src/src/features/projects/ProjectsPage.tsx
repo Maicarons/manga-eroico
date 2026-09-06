@@ -106,7 +106,7 @@ function LangSelect({
 export default function ProjectsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { projects, upsert, setActive } = useProjects();
+  const { projects, upsert, activate } = useProjects();
   const [creating, setCreating] = useState(false);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [name, setName] = useState("");
@@ -126,7 +126,7 @@ export default function ProjectsPage() {
       chapters: 0,
       lastOpened: new Date().toISOString(),
     });
-    setActive(root);
+    await activate(root);
     setCreating(false);
     setName("");
     navigate("/workflow");
@@ -215,7 +215,7 @@ export default function ProjectsPage() {
               className="cursor-pointer rounded-xl border p-4 transition-colors duration-200 hover:shadow-md"
               style={{ borderColor: "var(--border)", background: "var(--surface)" }}
               onClick={async () => {
-                setActive(p.root);
+                await activate(p.root);
                 const ov = await api.getProjectOverview();
                 setOverview(ov ?? null);
               }}

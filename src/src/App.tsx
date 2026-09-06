@@ -7,6 +7,7 @@ import EditorPage from "@/features/editor/EditorPage";
 import ModelsPage from "@/features/models/ModelsPage";
 import SettingsPage from "@/features/settings/SettingsPage";
 import { useTheme } from "@/lib/theme";
+import { useProjects } from "@/features/projects/projectsStore";
 
 export default function App() {
   const theme = useTheme((s) => s.theme);
@@ -14,6 +15,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset["theme"] = theme;
   }, [theme]);
+
+  // Reopen the last active project on the backend at startup (Tauri state
+  // is process-local; browser mock mode resolves instantly).
+  useEffect(() => {
+    void useProjects.getState().restore();
+  }, []);
 
   return (
     <Routes>

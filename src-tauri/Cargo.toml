@@ -22,6 +22,7 @@ tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 parking_lot = "0.12"
 reqwest = { workspace = true }
+dirs = "6"
 image = { version = "0.25", default-features = false, features = ["png"] }
 
 pipeline-core = { path = "../crates/pipeline-core" }

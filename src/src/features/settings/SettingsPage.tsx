@@ -127,6 +127,7 @@ export default function SettingsPage() {
           {SUPPORTED_LANGS.map((l) => (
             <button
               key={l}
+              data-testid={`ui-lang-${l}`}
               onClick={() => void i18n.changeLanguage(l)}
               className="rounded-lg px-3 py-2 text-sm"
               style={{

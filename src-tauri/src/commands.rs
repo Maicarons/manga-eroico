@@ -144,8 +144,37 @@ pub fn get_project_overview(state: State<'_, AppState>) -> Result<Option<serde_j
 
 /// Downloads a model from ModelScope into the app data dir, streaming progress
 /// events on the `model-download` channel.
+
+/// Resolves a project root: relative paths (from the webview, whose cwd is
+/// unpredictable) land under ~/.manga-eroico/projects; absolute paths pass
+/// through untouched.
+fn resolve_root(root: &str) -> PathBuf {
+    let pb = PathBuf::from(root);
+    if pb.is_absolute() {
+        return pb;
+    }
+    let base = dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".manga-eroico")
+        .join("projects");
+    base.join(pb)
+}
+
 #[tauri::command]
 pub async fn download_model(app: AppHandle, spec_id: String, dest_dir: String) -> Result<String, String> {
+    let dest_dir = {
+        let pb = PathBuf::from(&dest_dir);
+        if pb.is_absolute() {
+            dest_dir
+        } else {
+            dirs::home_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(".manga-eroico")
+                .join(&pb)
+                .to_string_lossy()
+                .into_owned()
+        }
+    };
     let spec = Registry::find(&spec_id).ok_or_else(|| format!("unknown model {spec_id}"))?;
     // ModelScope raw-file endpoint.
     let url = format!(
@@ -189,17 +218,19 @@ pub async fn create_project(
     source_lang: String,
     target_lang: String,
 ) -> Result<me_project::ProjectFile, String> {
-    let project = Project::create(PathBuf::from(&root), &name, lang_from_str(&source_lang), lang_from_str(&target_lang))
+    let resolved = resolve_root(&root);
+    let project = Project::create(&resolved, &name, lang_from_str(&source_lang), lang_from_str(&target_lang))
         .map_err(|e| e.to_string())?;
-    *state.open_project.lock() = Some(PathBuf::from(&root));
+    *state.open_project.lock() = Some(resolved);
     Ok(project.file().clone())
 }
 
 #[tauri::command]
 pub async fn open_project(state: State<'_, AppState>, root: String) -> Result<me_project::ProjectFile, String> {
-    let project = Project::open(PathBuf::from(&root)).map_err(|e| e.to_string())?;
-    *state.open_project.lock() = Some(PathBuf::from(&root));
-    Ok(project.file().clone())
+    let resolved = resolve_root(&root);
+    let p = Project::open(&resolved).map_err(|e| e.to_string())?;
+    *state.open_project.lock() = Some(resolved);
+    Ok(p.file().clone())
 }
 
 #[tauri::command]
