@@ -52,7 +52,11 @@ describe("App shell", () => {
     // zustand is a module singleton AND localStorage persists across tests
     // in the same file; App.restore() would resurrect the active project
     useProjects.setState({ projects: [], activeRoot: null, activated: false });
-    localStorage.clear();
+    try {
+      window.localStorage.clear();
+    } catch {
+      // some jsdom builds stub localStorage without clear()
+    }
     const wf = renderApp("/workflow");
     expect(screen.getByTestId("projects-page")).toBeInTheDocument();
     wf.unmount();
