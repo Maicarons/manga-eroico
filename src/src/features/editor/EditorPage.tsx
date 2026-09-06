@@ -70,7 +70,7 @@ export default function EditorPage() {
     const uri = stage.toDataURL({ pixelRatio: 2 });
     // data: URLs do not trigger real downloads in Chromium — convert to a
     // blob URL synchronously (no fetch, no CSP interference)
-    const [meta, b64] = uri.split(",");
+    const b64 = uri.split(",")[1] ?? "";
     const bin = atob(b64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
