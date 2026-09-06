@@ -52,6 +52,28 @@ pub fn get_llm_for_tier(tier: Tier) -> String {
     Registry::llm_for_tier(tier).to_string()
 }
 
+/// Persists one workflow-node parameter into the open project.
+#[tauri::command]
+pub fn set_node_param(
+    state: State<'_, AppState>,
+    node: String,
+    key: String,
+    value: serde_json::Value,
+) -> Result<(), String> {
+    let kind = match node.as_str() {
+        "detect" => StepKind::Detect,
+        "ocr" => StepKind::Ocr,
+        "inpaint" => StepKind::Inpaint,
+        "translate" => StepKind::Translate,
+        "polish" => StepKind::Polish,
+        "render" => StepKind::Render,
+        _ => return Err(format!("unknown node {node}")),
+    };
+    let path = state.open_project.lock().clone().ok_or("no project open")?;
+    let mut p = Project::open(&path).map_err(|e| e.to_string())?;
+    p.set_node_param(kind, &key, value).map_err(|e| e.to_string())
+}
+
 /// Runs the mock pipeline for every page of the open project (GUI batch),
 /// emitting pipeline-event per step/page just like run_pipeline_page.
 #[tauri::command]
@@ -135,10 +157,22 @@ pub fn get_project_overview(state: State<'_, AppState>) -> Result<Option<serde_j
             serde_json::json!({ "title": ch.title, "pages": pages })
         })
         .collect();
+    let params: serde_json::Map<String, serde_json::Value> = p
+        .file()
+        .pipeline
+        .steps()
+        .map(|c| {
+            (
+                c.kind.as_str().to_string(),
+                serde_json::to_value(&c.params).unwrap_or_default(),
+            )
+        })
+        .collect();
     Ok(Some(serde_json::json!({
         "name": p.file().name,
         "nodes": nodes,
         "chapters": chapters,
+        "params": params,
     })))
 }
 

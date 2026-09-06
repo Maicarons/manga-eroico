@@ -36,6 +36,7 @@ pub async fn run() {
             add_chapter,
             set_glossary_term,
             set_node_enabled,
+            set_node_param,
             run_pipeline_page,
             run_pipeline_all,
             polish_preview,

@@ -68,24 +68,18 @@ export default function EditorPage() {
     const stage = stageRef.current;
     if (!stage) return;
     const uri = stage.toDataURL({ pixelRatio: 2 });
-    // data: URLs do not trigger real downloads in Chromium — convert to blob
-    fetch(uri)
-      .then((r) => r.blob())
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "manga-eroico-page.png";
-        a.click();
-        URL.revokeObjectURL(url);
-      })
-      .catch(() => {
-        // fallback: plain data-url anchor (browser-dependent)
-        const a = document.createElement("a");
-        a.href = uri;
-        a.download = "manga-eroico-page.png";
-        a.click();
-      });
+    // data: URLs do not trigger real downloads in Chromium — convert to a
+    // blob URL synchronously (no fetch, no CSP interference)
+    const [meta, b64] = uri.split(",");
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "manga-eroico-page.png";
+    a.click();
+    URL.revokeObjectURL(url);
     setExported(true);
     setTimeout(() => setExported(false), 2500);
   };

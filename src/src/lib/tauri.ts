@@ -98,6 +98,7 @@ async function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
             ],
           },
         ],
+        params: {},
       } as T;
     case "get_translated_page": {
       // synthetic translated page for the browser preview
@@ -122,6 +123,8 @@ async function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
     case "add_chapter":
       return "ch_mock0001" as T;
     case "set_glossary_term":
+    case "set_node_param":
+      return undefined as T;
     case "set_node_enabled":
       return undefined as T;
     case "run_pipeline_all":
@@ -211,6 +214,7 @@ export const api = {
         title: string;
         pages: Array<{ id: string; file: string; nodes: Record<string, boolean> }>;
       }>;
+      params: Record<string, Record<string, unknown>>;
     } | null>("get_project_overview"),
   listModels: () => invoke<ModelSpec[]>("list_models"),
   openProject: (root: string) =>
@@ -228,6 +232,8 @@ export const api = {
     invoke("create_project", { root, name, sourceLang, targetLang }),
   setNodeEnabled: (node: string, enabled: boolean) =>
     invoke<void>("set_node_enabled", { node, enabled }),
+  setNodeParam: (node: string, key: string, value: unknown) =>
+    invoke<void>("set_node_param", { node, key, value }),
   runPipelinePage: (pageId: string) => invoke<boolean>("run_pipeline_page", { pageId }),
   runPipelineAll: () => invoke<string[]>("run_pipeline_all"),
   polishPreview: (

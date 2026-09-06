@@ -45,6 +45,16 @@ test.describe("projects page", () => {
     await expect(page.getByTestId("project-overview")).toBeHidden();
   });
 
+  test("workflow and editor require an active project (redirect to library)", async ({ page }) => {
+    await page.goto("/workflow");
+    await page.waitForTimeout(500);
+    await expect(page).toHaveURL(/projects/);
+    await expect(page.getByTestId("projects-page")).toBeVisible();
+    await page.goto("/editor");
+    await page.waitForTimeout(500);
+    await expect(page.getByTestId("projects-page")).toBeVisible();
+  });
+
   test("empty library shows guidance", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByTestId("projects-empty")).toBeVisible();
@@ -92,6 +102,21 @@ test.describe("workflow page", () => {
     await expect(page.getByTestId("diff-b002")).toBeVisible();
   });
 
+  test("node config panel opens, edits persist per node", async ({ page }) => {
+    // open the ocr node config and change the recognizer
+    await page.getByTestId("config-ocr").click();
+    await expect(page.getByTestId("config-panel-ocr")).toBeVisible();
+    await page.getByTestId("param-ocr-recognizer").selectOption("japan");
+    // switch to render node: number + checkbox params
+    await page.getByTestId("config-render").click();
+    await expect(page.getByTestId("config-panel-render")).toBeVisible();
+    await page.getByTestId("param-render-font_size").fill("22");
+    await page.getByTestId("param-render-vertical").check();
+    // switch back to the ocr panel (single click closes render, opens ocr)
+    await page.getByTestId("config-ocr").click();
+    await expect(page.getByTestId("param-ocr-recognizer")).toHaveValue("japan");
+  });
+
   test("open-editor link appears after render and navigates", async ({ page }) => {
     await page.getByTestId("run-page").click();
     const link = page.getByTestId("open-editor");
@@ -114,8 +139,10 @@ test.describe("editor page", () => {
     const text = page.getByTestId("bubble-text");
     await text.fill("你好，世界！");
     await expect(text).toHaveValue("你好，世界！");
+    // register the listener BEFORE clicking: the export is synchronous
+    const downloadPromise = page.waitForEvent("download");
     await page.getByTestId("export-png").click();
-    const download = await page.waitForEvent("download");
+    const download = await downloadPromise;
     expect(download.suggestedFilename()).toBe("manga-eroico-page.png");
   });
 });

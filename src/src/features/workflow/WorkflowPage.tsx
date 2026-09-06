@@ -11,6 +11,74 @@ import "@xyflow/react/dist/style.css";
 import { api, listenPipeline, type PipelineEvent } from "@/lib/tauri";
 import { useProjects } from "@/features/projects/projectsStore";
 
+// Per-node editable parameters; every change persists into project.json
+// via set_node_param (mock mode keeps it in-memory).
+const PARAM_SCHEMA: Record<
+  string,
+  Array<{ key: string; label: string; type: "number" | "text" | "select" | "checkbox"; options?: Array<[string, string]>; step?: number }>
+> = {
+  detect: [
+    { key: "text_threshold", label: "Text threshold", type: "number", step: 0.05 },
+    { key: "unclip_ratio", label: "Unclip ratio", type: "number", step: 0.1 },
+  ],
+  ocr: [
+    {
+      key: "recognizer",
+      label: "Recognizer",
+      type: "select",
+      options: [
+        ["", "auto"],
+        ["mixed", "mixed (zh/en/ja/ko)"],
+        ["japan", "japan"],
+        ["chinese_cht", "chinese_cht"],
+        ["en", "en"],
+        ["korean", "korean"],
+        ["latin", "latin"],
+        ["cyrillic", "cyrillic"],
+        ["arabic", "arabic"],
+        ["devanagari", "devanagari"],
+        ["ta", "ta"],
+        ["te", "te"],
+        ["th", "th"],
+      ],
+    },
+  ],
+  inpaint: [
+    {
+      key: "method",
+      label: "Method",
+      type: "select",
+      options: [
+        ["fill", "fill (fast, flat backgrounds)"],
+        ["aot", "AOT (AI)"],
+        ["lama_mpe", "LaMa-mpe (AI, best)"],
+      ],
+    },
+  ],
+  translate: [
+    { key: "llm_model", label: "LLM model", type: "text" },
+    { key: "temperature", label: "Temperature", type: "number", step: 0.1 },
+  ],
+  polish: [
+    {
+      key: "style",
+      label: "Style",
+      type: "select",
+      options: [
+        ["", "default"],
+        ["formal", "formal"],
+        ["casual", "casual"],
+        ["literary", "literary"],
+      ],
+    },
+    { key: "base_url", label: "Base URL", type: "text" },
+  ],
+  render: [
+    { key: "font_size", label: "Base font size", type: "number", step: 1 },
+    { key: "vertical", label: "Vertical layout", type: "checkbox" },
+  ],
+};
+
 const STEPS = ["detect", "ocr", "inpaint", "translate", "polish", "render"] as const;
 type Step = (typeof STEPS)[number];
 
@@ -64,6 +132,8 @@ export default function WorkflowPage() {
   );
   const [running, setRunning] = useState(false);
   const [events, setEvents] = useState<PipelineEvent[]>([]);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [nodeParams, setNodeParams] = useState<Record<string, Record<string, unknown>>>({});
   const [polishPreview, setPolishPreview] = useState<{ analysis: string; items: Array<{ id: string; polished: string; note: string | null }> } | null>(null);
   const [adopted, setAdopted] = useState<Set<string>>(new Set());
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -84,6 +154,7 @@ export default function WorkflowPage() {
         const step = ev.step as Step;
         if (!prev[step]) return prev;
         return { ...prev, [step]: { ...prev[step], status: ev.status } };
+
       });
     });
     return un;
@@ -99,6 +170,25 @@ export default function WorkflowPage() {
     },
     [],
   );
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const ov = await api.getProjectOverview();
+        if (ov?.params) setNodeParams(ov.params);
+      } catch {
+        // mock mode or no project
+      }
+    })();
+  }, []);
+
+  const setParam = (node: string, key: string, value: unknown) => {
+    setNodeParams((prev) => ({
+      ...prev,
+      [node]: { ...(prev[node] ?? {}), [key]: value },
+    }));
+    void api.setNodeParam(node, key, value).catch(() => {});
+  };
 
   const runPage = async () => {
     setRunning(true);
@@ -164,28 +254,110 @@ export default function WorkflowPage() {
 
       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-6" data-testid="node-toggles">
         {STEPS.map((step) => (
-          <button
+          <div
             key={step}
-            data-testid={`toggle-${step}`}
-            onClick={() => toggle(step)}
-            className="rounded-lg border px-3 py-2 text-xs"
-            style={{
-              borderColor: "var(--border)",
-              background: states[step].enabled ? STEP_COLORS[step] : "var(--surface-2)",
-              color: states[step].enabled ? "#fff" : "var(--text-muted)",
-            }}
+            className="flex items-stretch overflow-hidden rounded-lg border"
+            style={{ borderColor: selectedNode === step ? "var(--accent)" : "var(--border)" }}
           >
-            <svg
-              className="h-3 w-3"
-              viewBox="0 0 12 12"
-              aria-hidden
+            <button
+              data-testid={`toggle-${step}`}
+              onClick={() => toggle(step)}
+              className="flex flex-1 items-center justify-center gap-1 px-3 py-2 text-xs"
+              style={{
+                background: states[step].enabled ? STEP_COLORS[step] : "var(--surface-2)",
+                color: states[step].enabled ? "#fff" : "var(--text-muted)",
+              }}
             >
-              <circle cx="6" cy="6" r="4" fill={states[step].enabled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-            {labels[step]}
-          </button>
+              <svg
+                className="h-3 w-3"
+                viewBox="0 0 12 12"
+                aria-hidden
+              >
+                <circle cx="6" cy="6" r="4" fill={states[step].enabled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+              {labels[step]}
+            </button>
+            <button
+              data-testid={`config-${step}`}
+              onClick={() => setSelectedNode((cur) => (cur === step ? null : step))}
+              className="cursor-pointer border-l px-2 text-xs"
+              style={{
+                borderColor: "var(--border)",
+                background: selectedNode === step ? "var(--accent)" : "var(--surface-2)",
+                color: selectedNode === step ? "#fff" : "var(--text-muted)",
+              }}
+              aria-label={`configure ${step}`}
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
         ))}
       </div>
+
+      {selectedNode && (
+        <div
+          className="mt-3 rounded-xl border p-4"
+          style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
+          data-testid={`config-panel-${selectedNode}`}
+        >
+          <div className="mb-2 text-xs font-semibold">
+            {labels[selectedNode as keyof typeof labels]} · {t("workflow.configTitle")}
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            {(PARAM_SCHEMA[selectedNode] ?? []).map((f) => {
+              const value = nodeParams[selectedNode]?.[f.key];
+              const common = {
+                "data-testid": `param-${selectedNode}-${f.key}`,
+                className: "w-full rounded-lg border p-2 text-xs",
+                style: { borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" },
+              };
+              return (
+                <label key={f.key} className="block text-xs" style={{ color: "var(--text-muted)" }}>
+                  {f.label}
+                  {f.type === "select" ? (
+                    <select
+                      {...common}
+                      value={(value as string) ?? ""}
+                      onChange={(e) => setParam(selectedNode, f.key, e.target.value)}
+                    >
+                      {(f.options ?? []).map(([v, l]) => (
+                        <option key={v} value={v}>
+                          {l}
+                        </option>
+                      ))}
+                    </select>
+                  ) : f.type === "checkbox" ? (
+                    <input
+                      {...common}
+                      type="checkbox"
+                      checked={Boolean(value)}
+                      onChange={(e) => setParam(selectedNode, f.key, e.target.checked)}
+                      className="mt-1"
+                    />
+                  ) : (
+                    <input
+                      {...common}
+                      type={f.type}
+                      step={f.step}
+                      value={(value as string | number | undefined) ?? ""}
+                      onChange={(e) =>
+                        setParam(
+                          selectedNode,
+                          f.key,
+                          f.type === "number" ? Number(e.target.value) : e.target.value,
+                        )
+                      }
+                    />
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
         {activeRoot ?? "(no project)"} · {t("workflow.enableHint")} · {t("workflow.polishHint")}

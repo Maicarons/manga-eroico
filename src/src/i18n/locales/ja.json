@@ -23,7 +23,8 @@
       "light": "ライト",
       "dark": "ダーク",
       "system": "システムに従う"
-    }
+    },
+    "currentProject": "現在のプロジェクト"
   },
   "projects": {
     "title": "プロジェクト",
@@ -73,7 +74,8 @@
     "openEditor": "エディタで調整 →",
     "polishPreview": "推敲プレビュー",
     "adopt": "採用",
-    "dismiss": "却下"
+    "dismiss": "却下",
+    "configTitle": "ノード設定"
   },
   "editor": {
     "title": "漫画エディター",

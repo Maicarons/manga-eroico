@@ -23,7 +23,8 @@
       "light": "浅色",
       "dark": "深色",
       "system": "跟随系统"
-    }
+    },
+    "currentProject": "当前工程"
   },
   "projects": {
     "title": "工程库",
@@ -73,7 +74,8 @@
     "openEditor": "在编辑器中微调 →",
     "polishPreview": "润色预览",
     "adopt": "采纳",
-    "dismiss": "忽略"
+    "dismiss": "忽略",
+    "configTitle": "节点配置"
   },
   "editor": {
     "title": "漫画编辑器",

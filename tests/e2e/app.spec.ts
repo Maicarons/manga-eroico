@@ -47,6 +47,11 @@ test.describe("manga-eroico web preview (mocked pipeline)", () => {
   });
 
   test("M3 loop: run pipeline, open editor, fine-tune, export", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("new-project").click();
+    await page.getByTestId("project-name").fill("Seed");
+    await page.getByTestId("create-confirm").click();
+    await expect(page.getByTestId("workflow-page")).toBeVisible();
     await page.getByRole("link", { name: /工作流|Workflow|ワークフロー|워크플로/ }).click();
     const run = page.getByTestId("run-page");
     await run.click();
@@ -79,6 +84,11 @@ test.describe("manga-eroico web preview (mocked pipeline)", () => {
   });
 
   test("M3: polish preview adopt and dismiss per bubble", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("new-project").click();
+    await page.getByTestId("project-name").fill("Seed");
+    await page.getByTestId("create-confirm").click();
+    await expect(page.getByTestId("workflow-page")).toBeVisible();
     await page.getByRole("link", { name: /工作流|Workflow|ワークフロー|워크플로/ }).click();
     // enable the polish node, run the page
     await page.getByTestId("toggle-polish").click();

@@ -294,6 +294,25 @@ impl Project {
 
     // ---- pipeline config (workflow canvas mirror) ----
 
+    /// Sets one workflow-node parameter and persists the change.
+    pub fn set_node_param(
+        &mut self,
+        node: pipeline_core::graph::StepKind,
+        key: &str,
+        value: serde_json::Value,
+    ) -> Result<(), ProjectError> {
+        let mut graph = self.file.pipeline.clone();
+        if !graph.set_param(node, key, value) {
+            return Err(ProjectError::Json(serde_json::Error::io(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("node {node:?} not in pipeline"),
+            ))));
+        }
+        self.file.pipeline = graph;
+        self.save()?;
+        Ok(())
+    }
+
     pub fn set_pipeline(&mut self, graph: PipelineGraph) {
         self.file.pipeline = graph;
     }

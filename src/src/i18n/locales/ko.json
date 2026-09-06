@@ -23,7 +23,8 @@
       "light": "라이트",
       "dark": "다크",
       "system": "시스템 따르기"
-    }
+    },
+    "currentProject": "현재 프로젝트"
   },
   "projects": {
     "title": "프로젝트",
@@ -73,7 +74,8 @@
     "openEditor": "에디터에서 조정 →",
     "polishPreview": "다듬기 미리보기",
     "adopt": "채택",
-    "dismiss": "제외"
+    "dismiss": "제외",
+    "configTitle": "노드 설정"
   },
   "editor": {
     "title": "만화 편집기",

@@ -56,6 +56,10 @@ pub struct NodeConfig {
     pub enabled: bool,
     /// Max automatic retries before the step is marked failed.
     pub max_retries: u32,
+    /// Free-form node parameters (thresholds, model choices, endpoints...).
+    /// Each node type documents its own keys; unknown keys are preserved.
+    #[serde(default)]
+    pub params: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 impl Default for NodeConfig {
@@ -64,6 +68,7 @@ impl Default for NodeConfig {
             kind: StepKind::Detect,
             enabled: true,
             max_retries: 2,
+            params: Default::default(),
         }
     }
 }
@@ -115,6 +120,30 @@ impl PipelineGraph {
 
     /// Toggles a node from the workflow canvas. Returns `false` when the kind
     /// is not part of the graph.
+    /// Sets one node parameter, returning false when the node is absent.
+    pub fn set_param(
+        &mut self,
+        kind: StepKind,
+        key: &str,
+        value: serde_json::Value,
+    ) -> bool {
+        match self.configs.iter_mut().find(|c| c.kind == kind) {
+            Some(cfg) => {
+                cfg.params.insert(key.to_string(), value);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Reads one node parameter (None when node or key is absent).
+    pub fn param(&self, kind: StepKind, key: &str) -> Option<&serde_json::Value> {
+        self.configs
+            .iter()
+            .find(|c| c.kind == kind)
+            .and_then(|c| c.params.get(key))
+    }
+
     pub fn set_enabled(&mut self, kind: StepKind, enabled: bool) -> bool {
         match self.configs.iter_mut().find(|c| c.kind == kind) {
             Some(c) => {

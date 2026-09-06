@@ -23,7 +23,8 @@
       "light": "Light",
       "dark": "Dark",
       "system": "System"
-    }
+    },
+    "currentProject": "Current project"
   },
   "projects": {
     "title": "Projects",
@@ -73,7 +74,8 @@
     "openEditor": "Fine-tune in editor →",
     "polishPreview": "Polish preview",
     "adopt": "Adopt",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "configTitle": "Node configuration"
   },
   "editor": {
     "title": "Manga editor",
