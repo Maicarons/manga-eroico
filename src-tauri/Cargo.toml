@@ -34,3 +34,7 @@ me-ocr = { path = "../crates/me-ocr" }
 me-inpaint = { path = "../crates/me-inpaint" }
 me-translate = { path = "../crates/me-translate" }
 me-render = { path = "../crates/me-render" }
+
+[dev-dependencies]
+tauri = { version = "2", features = ["test"] }
+tokio = { version = "1", features = ["rt", "macros"] }

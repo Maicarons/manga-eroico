@@ -21,12 +21,26 @@ export default function ModelsPage() {
   const [models, setModels] = useState<ModelSpec[]>([]);
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [dlError, setDlError] = useState<string | null>(null);
 
   useEffect(() => {
     void api.getHardwareInfo().then(setHw);
     void api.listModels().then(setModels);
     const un = listenModelDownload((ev) => {
       setProgress((p) => ({ ...p, [ev.id]: ev.percent }));
+    });
+    // reflect real disk state: already-downloaded models show as verified
+    void api.listModels().then(async (specs) => {
+      const entries = await Promise.all(
+        specs.map(async (m) => [m.id, (await api.modelExists(m.id).catch(() => false)) ? 100 : 0] as const),
+      );
+      setProgress((p) => {
+        const next = { ...p };
+        for (const [id, pct] of entries) {
+          if (pct === 100 && (next[id] == null || next[id] < 100)) next[id] = 100;
+        }
+        return next;
+      });
     });
     return un;
   }, []);
@@ -56,8 +70,17 @@ export default function ModelsPage() {
     });
 
   const startDownloads = () => {
+    setDlError(null);
     chosen.forEach((m) => {
-      if (progress[m.id] == null || progress[m.id] < 100) void api.downloadModel(m.id);
+      if (progress[m.id] == null || progress[m.id] < 100) {
+        api
+          .downloadModel(m.id)
+          .then(() => setProgress((p) => ({ ...p, [m.id]: 100 })))
+          .catch((e) => {
+            console.error("download failed", m.id, e);
+            setDlError(`${m.id}: ${String(e)}`);
+          });
+      }
     });
   };
 
@@ -247,6 +270,16 @@ export default function ModelsPage() {
 
       {step === "download" && (
         <section aria-label={t("models.wizard.step.download")}>
+          {dlError && (
+            <div
+              className="mb-4 rounded-xl border p-4 text-xs"
+              style={{ borderColor: "var(--err, #d33)", background: "var(--surface)" }}
+              data-testid="download-error"
+            >
+              <div className="font-semibold">Download error</div>
+              <div className="mt-1 break-all font-mono">{dlError}</div>
+            </div>
+          )}
           {allDone ? (
             <div
               className="mb-4 flex items-center gap-3 rounded-xl border p-4"

@@ -74,6 +74,19 @@ pub fn set_node_param(
     p.set_node_param(kind, &key, value).map_err(|e| e.to_string())
 }
 
+/// Disk-state check for model files (used by the UI to show real status).
+#[tauri::command]
+pub fn model_exists(state: State<'_, AppState>, spec_id: String) -> Result<bool, String> {
+    let _ = state;
+    let spec = Registry::find(&spec_id).ok_or_else(|| format!("unknown model {spec_id}"))?;
+    let base = dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".manga-eroico")
+        .join("models");
+    let dest = base.join(spec.file);
+    Ok(dest.is_file() && std::fs::metadata(&dest).map(|m| m.len() > 0).unwrap_or(false))
+}
+
 /// Runs the mock pipeline for every page of the open project (GUI batch),
 /// emitting pipeline-event per step/page just like run_pipeline_page.
 #[tauri::command]
@@ -210,25 +223,53 @@ pub async fn download_model(app: AppHandle, spec_id: String, dest_dir: String) -
         }
     };
     let spec = Registry::find(&spec_id).ok_or_else(|| format!("unknown model {spec_id}"))?;
-    // ModelScope raw-file endpoint.
-    let url = format!(
-        "https://modelscope.cn/models/{}/resolve/master/{}",
-        spec.modelscope_repo, spec.file
-    );
+    // Honor per-spec overrides (e.g. GitHub release assets); ModelScope
+    // raw-file endpoint otherwise.
+    let url = if spec.url_override.is_empty() {
+        format!(
+            "https://modelscope.cn/models/{}/resolve/master/{}",
+            spec.modelscope_repo, spec.file
+        )
+    } else {
+        spec.url_override.to_string()
+    };
+    eprintln!("[download] {spec_id} from {url}");
     let dest = PathBuf::from(dest_dir).join(spec.file);
+    // Idempotent: an already-downloaded (non-empty) file resolves instantly
+    // instead of re-fetching hundreds of megabytes.
+    if dest.is_file() && std::fs::metadata(&dest).map(|m| m.len() > 0).unwrap_or(false) {
+        return Ok(dest.to_string_lossy().into_owned());
+    }
     let client = reqwest::Client::builder().user_agent("manga-eroico/0.1").build().map_err(|e| e.to_string())?;
-    model_manager::download_file(&client, &url, dest.clone(), &|downloaded, total| {
+    // Progress events are throttled to ~5 Hz: emitting every chunk would
+    // flood the webview with tens of thousands of IPC events on large
+    // models and freeze the UI.
+    let last_emit = std::sync::Arc::new(std::sync::Mutex::new((0u8, std::time::Instant::now())));
+    let app_for_progress = app.clone();
+    let spec_id_for_progress = spec_id.clone();
+    model_manager::download_file(&client, &url, dest.clone(), &move |downloaded, total| {
         if let Some(t) = total {
             let pct = ((downloaded as f64 / t as f64) * 100.0).min(100.0) as u8;
-            let _ = app.emit("model-download", serde_json::json!({
-                "id": spec_id, "downloaded": downloaded, "total": t, "percent": pct,
-            }));
+            let mut last = last_emit.lock().unwrap();
+            let now = std::time::Instant::now();
+            let changed = pct != last.0;
+            let elapsed = now.duration_since(last.1).as_millis() >= 200;
+            if changed && (elapsed || pct == 100) {
+                *last = (pct, now);
+                let _ = app_for_progress.emit("model-download", serde_json::json!({
+                    "id": spec_id_for_progress, "downloaded": downloaded, "total": t, "percent": pct,
+                }));
+            }
         }
     })
     .await
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| {
+        eprintln!("[download] {spec_id} FAILED: {e}");
+        e.to_string()
+    })?;
     // Verify when pinned; fail loudly on corruption.
     model_manager::verify_sha256(&dest, spec.sha256).map_err(|e| e.to_string())?;
+    eprintln!("[download] {spec_id} OK -> {}", dest.display());
     Ok(dest.to_string_lossy().into_owned())
 }
 

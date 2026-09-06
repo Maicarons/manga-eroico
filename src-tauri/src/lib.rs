@@ -27,6 +27,7 @@ pub async fn run() {
             list_models,
             get_llm_for_tier,
             download_model,
+            model_exists,
             create_project,
             open_project,
             commands::get_translated_page,
@@ -41,6 +42,27 @@ pub async fn run() {
             run_pipeline_all,
             polish_preview,
         ])
+        .setup(|app| {
+            // Debug self-test: exercise the real download path once at startup
+            // so command-layer failures show up in stderr immediately.
+            #[cfg(debug_assertions)]
+            {
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    match crate::commands::download_model(
+                        handle,
+                        "ppocrv5_det".into(),
+                        "models".into(),
+                    )
+                    .await
+                    {
+                        Ok(p) => eprintln!("[selftest] download OK: {p}"),
+                        Err(e) => eprintln!("[selftest] download FAILED: {e}"),
+                    }
+                });
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running manga-eroico");
 }

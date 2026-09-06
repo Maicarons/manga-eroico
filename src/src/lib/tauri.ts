@@ -65,6 +65,8 @@ async function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
       return mockModels as T;
     case "get_llm_for_tier":
       return "hymt2_7b_q4" as T;
+    case "model_exists":
+      return false as T;
     case "download_model":
       // fake a download with progress
       for (const pct of [25, 50, 75, 100]) {
@@ -228,6 +230,7 @@ export const api = {
     invoke<void>("set_glossary_term", { term, translation }),
   downloadModel: (specId: string, destDir = "models") =>
     invoke<string>("download_model", { specId, destDir }),
+  modelExists: (specId: string) => invoke<boolean>("model_exists", { specId }),
   createProject: (root: string, name: string, sourceLang: string, targetLang: string) =>
     invoke("create_project", { root, name, sourceLang, targetLang }),
   setNodeEnabled: (node: string, enabled: boolean) =>
