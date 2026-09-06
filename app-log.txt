@@ -1,2 +1,0 @@
-[download] ppocrv5_det from https://modelscope.cn/models/RapidAI/RapidOCR/resolve/master/onnx/PP-OCRv5/det/ch_PP-OCRv5_det_mobile.onnx
-[selftest] download OK: C:\Users\Maicarons\.manga-eroico\models\onnx/PP-OCRv5/det/ch_PP-OCRv5_det_mobile.onnx
