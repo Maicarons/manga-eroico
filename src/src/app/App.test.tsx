@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import App from "@/App";
+import { useProjects } from "@/features/projects/projectsStore";
 import "../i18n";
 
 function renderApp(initial = "/projects") {
@@ -48,6 +49,8 @@ describe("App shell", () => {
   });
 
   it("redirects workflow/editor to the library when no project is active", () => {
+    // zustand is a module singleton: earlier tests left an active project
+    useProjects.setState({ projects: [], activeRoot: null, activated: false });
     const wf = renderApp("/workflow");
     expect(screen.getByTestId("projects-page")).toBeInTheDocument();
     wf.unmount();
